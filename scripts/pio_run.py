@@ -24,6 +24,20 @@ def stage_project(root):
         base = root / directory
         if base.exists():
             sources.extend(path for path in base.rglob("*") if path.is_file())
+    # PlatformIO watches only the top-level CMake files. Component manifests
+    # and newly added local overrides also require CMake dependency resolution.
+    cmake_inputs = hashlib.sha256()
+    for source in sorted(sources):
+        if source.name in ("CMakeLists.txt", "idf_component.yml", "Kconfig", "Kconfig.projbuild"):
+            cmake_inputs.update(str(source.relative_to(root)).encode())
+            cmake_inputs.update(source.read_bytes())
+    stamp = stage / ".cmake-inputs.sha256"
+    signature = cmake_inputs.hexdigest()
+    if not stamp.exists() or stamp.read_text() != signature:
+        cache = stage / ".pio/build/szp_s3/CMakeCache.txt"
+        if cache.exists():
+            cache.unlink()
+        stamp.write_text(signature)
     defaults = root / "sdkconfig.defaults"
     staged_defaults = stage / "sdkconfig.defaults"
     if staged_defaults.exists() and defaults.read_bytes() != staged_defaults.read_bytes():

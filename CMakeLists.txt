@@ -1,4 +1,4 @@
 cmake_minimum_required(VERSION 3.16)
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
-project(szp_hardware_lab)
+project(gpt_voice_terminal)
 
