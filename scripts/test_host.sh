@@ -2,6 +2,8 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 mkdir -p artifacts/tests
+cc -std=c11 -Wall -Wextra -Werror -fsanitize=address,undefined -I src tests/conversation_test.c src/core/conversation.c -o artifacts/tests/conversation
+artifacts/tests/conversation
 cc -std=c11 -Wall -Wextra -Werror -fsanitize=address,undefined -I src tests/resampler_test.c src/core/resampler.c -lm -o artifacts/tests/resampler
 artifacts/tests/resampler
 cc -std=c11 -Wall -Wextra -Werror -fsanitize=address,undefined -I src tests/path_test.c src/core/path.c -o artifacts/tests/path

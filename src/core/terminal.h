@@ -50,7 +50,7 @@ typedef struct {
     unsigned ble_generation;
     char ble_status[160];
     char music_path[PATH_SIZE], music_status[128];
-    char voice_status[160], transcript[3072];
+    char voice_status[160], transcript[32768];
     bool voice_active;
     unsigned revision;
 } terminal_state_t;

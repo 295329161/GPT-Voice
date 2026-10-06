@@ -99,6 +99,7 @@ static uint64_t selected_size;
 static terminal_state_t *snapshot;
 static int confirm_action;
 static bool dialog;
+static bool voice_follow_latest, voice_dragging;
 lv_obj_t *shell_content(void) {
     return content;
 }
@@ -327,11 +328,38 @@ static void games_page(void) {
     lv_slider_set_value(s, config.sensitivity, LV_ANIM_OFF);
     lv_obj_add_event_cb(s, slider_changed, LV_EVENT_RELEASED, (void *)2);
 }
+static void voice_scroll(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_PRESSED) {
+        voice_dragging = true;
+        voice_follow_latest = false;
+    } else {
+        if (code == LV_EVENT_RELEASED || code == LV_EVENT_PRESS_LOST)
+            voice_dragging = false;
+        if (!voice_dragging)
+            voice_follow_latest = lv_obj_get_scroll_bottom(lv_event_get_target(e)) <= 12;
+    }
+}
+static void voice_latest(lv_event_t *e) {
+    (void)e;
+    voice_follow_latest = true;
+    voice_dragging = false;
+    lv_obj_update_layout(list);
+    lv_obj_scroll_to_y(list, LV_COORD_MAX, LV_ANIM_OFF);
+}
 static void voice_page(void) {
-    info = ui_label(content, "正在连接…", 0, 0, 294);
+    voice_follow_latest = true;
+    voice_dragging = false;
+    info = ui_label(content, "正在连接…", 0, 0, 232);
+    ui_button(content, "最新", 240, 0, 54, voice_latest, NULL);
     list = lv_obj_create(content);
     lv_obj_set_pos(list, 0, 38);
     lv_obj_set_size(list, 294, 147);
+    lv_obj_set_scroll_dir(list, LV_DIR_VER);
+    lv_obj_add_event_cb(list, voice_scroll, LV_EVENT_SCROLL, NULL);
+    lv_obj_add_event_cb(list, voice_scroll, LV_EVENT_PRESSED, NULL);
+    lv_obj_add_event_cb(list, voice_scroll, LV_EVENT_RELEASED, NULL);
+    lv_obj_add_event_cb(list, voice_scroll, LV_EVENT_PRESS_LOST, NULL);
     ui_label(list, "", 0, 0, 258);
 }
 static void ha_page(void) {
@@ -747,7 +775,13 @@ static void tick(lv_timer_t *timer) {
     if (active == VOICE) {
         lv_label_set_text(info, snapshot->voice_status);
         lv_obj_t *l = lv_obj_get_child(list, 0);
-        lv_label_set_text(l, snapshot->transcript);
+        if (strcmp(lv_label_get_text(l), snapshot->transcript)) {
+            bool follow = voice_follow_latest;
+            lv_label_set_text(l, snapshot->transcript);
+            lv_obj_update_layout(list);
+            if (follow)
+                lv_obj_scroll_to_y(list, LV_COORD_MAX, LV_ANIM_OFF);
+        }
     }
     if (active == ABOUT) {
         snprintf(text, sizeof(text),

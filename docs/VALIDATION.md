@@ -13,6 +13,15 @@
 - 主机 AddressSanitizer / UndefinedBehaviorSanitizer 检查通过：重采样计数、任意分块一致性与波形电平；SD 路径限制；MP3 错误恢复。
 - 五关迷宫均通过按实际球半径计算的路径可达性检查。
 - 构建脚本回归测试通过：组件清单变化会清除 CMake 缓存，未变化则保留缓存。
+- Step Plan 实机连接：收到 `session.created` 与 `session.updated`，进入聆听状态；用户网页填写的 Key 和原 Wi-Fi 配置在固件更新后保留。
+- 修复 WebSocket 事件队列内部 RAM 分配失败：语音消息、工具和采集任务栈迁移到 PSRAM，蓝牙优先使用 PSRAM；启动后空闲内部 RAM 约 56 KB。
+- 修复 Step Plan 握手响应超过默认 1024 字节缓冲：底层 WebSocket 握手缓冲增至 8192 字节。实机 TLS 和会话配置通过。
+- 实测定位采集循环被网络发送阻塞（16 ms 音频耗时超过 30 ms）。拆分采集／上传任务后，每 160 帧约 2.56 秒，上传队列稳定在 0–2 帧；收到自动 speech_started / speech_stopped、输入转写和语音回答，用户确认有反应。
+- 连续回答复现原 8 条消息接收队列拥塞；改为 64 条接收消息、1024 块播放缓冲后，实测连续完成至少 12 次回答未再拥塞，用户反馈“比较稳定”。
+- 手动 commit 在 server_vad 模式下被服务器拒绝，已移除临时诊断命令。模型曾猜错日期，新增 get_time 校时工具和会话时间上下文；工具调用的实际日期回答仍待确认。
+- 自动打断时服务器可能先行结束回答，忽略明确的 no ongoing response to cancel 时序提示，避免误报配置失败。
+- 对话区新增自动跟随最新文字、手动拖动暂停跟随、回到底部或“最新”按钮恢复跟随；实机确认“最新”按钮显示和会话继续运行；手动拖动体验由用户继续验证。
+- 本轮主机重采样、路径、迷宫、MP3 与构建缓存回归检查通过（voice-host-tests.log）。
 
 ## 尚需实测，未标记通过
 
@@ -35,5 +44,11 @@
 - `web-test.log`：配置网页接口验证。
 - `final-desktop.png`、`final-desktop-1.png`：天气主页与应用菜单。
 - `final-status.log`：最终设备状态。
+- `voice-fixed.log` / `.png`：Step Plan 会话配置成功后的聆听页面。
+- `voice-live.log`、`voice-vad-live.log`：通道峰值、上传帧数和服务端事件诊断（不记录音频内容和密钥）。
 
 使用 `bash scripts/test_host.sh` 重跑主机测试。使用 `scripts/demo_serial.py` 获取状态和截图。当前串口命令包括 `status`、`page N`、`shot`、`ls`、`music <绝对路径>`、`stop`、`city <城市>`、`web`；Wi-Fi 配置命令中的密码不要放进共享日志或提交文件。
+
+进一步语音证据：`voice-pipeline-live.log` / `voice-pipeline.png` 记录自动语音事件和首次连续会话的拥塞；`voice-buffer-live.log` 为扩大缓冲后的复测。
+
+消息顺序修复：新增 conversation 主机回归，覆盖助手先返回、前一轮转写晚于后一轮回答、工具后续回答、整轮历史淘汰和 UTF-8 截断；ASan/UBSan 通过，见 `voice-order-tests.log`。固件构建／烧录见 `voice-order-build.log`、`voice-order-flash.log`。
