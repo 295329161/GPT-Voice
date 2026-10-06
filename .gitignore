@@ -1,0 +1,6 @@
+.pio/
+.tools/
+sdkconfig.szp_s3
+backups/
+artifacts/
+__pycache__/

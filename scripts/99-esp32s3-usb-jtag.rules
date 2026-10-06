@@ -1,0 +1,2 @@
+# Espressif USB Serial/JTAG. The development user must belong to plugdev.
+SUBSYSTEM=="usb", ATTR{idVendor}=="303a", ATTR{idProduct}=="1001", MODE="0660", GROUP="plugdev", TAG+="uaccess"
