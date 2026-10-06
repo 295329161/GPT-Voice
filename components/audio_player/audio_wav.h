@@ -28,6 +28,7 @@ typedef struct {
 
 typedef struct {
     wav_header_t header;
+    uint32_t data_remaining;
 } wav_instance;
 
 bool is_wav(FILE *fp, wav_instance *pInstance);

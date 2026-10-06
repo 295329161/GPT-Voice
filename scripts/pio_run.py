@@ -64,6 +64,12 @@ def main():
     root = Path(__file__).resolve().parents[1]
     pio = Path(sys.executable).parent / "pio"
     action = sys.argv[1] if len(sys.argv) > 1 else "build"
+    if action == "monitor":
+        # The generic pyserial monitor changes modem lines during open. This
+        # board wires them to BOOT/RESET, so use the control-line-safe console.
+        return subprocess.call([shutil.which("python3") or sys.executable,
+                                str(root / "scripts/device_console.py"),
+                                str(root / "artifacts/device-session")], cwd=root)
     os.environ["ESP_IDF_VERSION"] = "5.5.0"  # codec component Kconfig compatibility gate
     stage = stage_project(root)
     command = [str(pio)]

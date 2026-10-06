@@ -459,6 +459,9 @@ esp_err_t bsp_sdcard_mount(void)
     };
 
     sdmmc_host_t sdmmc_host = SDMMC_HOST_DEFAULT(); // SDMMC主机接口配置
+    // Leave signal margin for the board's 1-bit bus and removable cards.
+    // 10 MHz remains sufficient for the supported audio/image workload.
+    sdmmc_host.max_freq_khz = 10000;
     sdmmc_slot_config_t slot_config = SDMMC_SLOT_CONFIG_DEFAULT(); // SDMMC插槽配置
     slot_config.width = 1;  // 设置为1线SD模式
     slot_config.clk = SD_CLK_IO; 

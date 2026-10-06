@@ -1,0 +1,52 @@
+GPT Voice 1.0.0 — Sanitized execution excerpts
+Only bounded diagnostic status/response lines; credentials, pairing codes and retrieved articles excluded.
+
+
+[sd-stress-run.log]
+BACKLIGHT on=1 brightness=77 duty=787 boot_level=1
+SD_ITERATIONS_PASSED 20
+SD_ITERATIONS_PASSED 40
+SD_ITERATIONS_PASSED 60
+SD_ITERATIONS_PASSED 80
+SD_ITERATIONS_PASSED 100
+AUDIO_PROBE amp=1 pin=1 playing=1 volume=65 mean_abs=15856/530/250 peak=32768/3639/2022
+STATUS online=1 time=1 sd=1 imu=1 audio=1 voice=0 heap=7462992 internal=63203 tasks=24
+BACKLIGHT on=1 brightness=77 duty=787 boot_level=1
+SD_STRESS_PASS 100 listings including 50 during MP3 playback
+
+[final-dialogs-pass-run.log]
+FIXTURES removed=1
+
+[voice-final-run.log]
+STATUS online=1 time=1 sd=1 imu=1 audio=1 voice=1 heap=7299508 internal=13991 tasks=25
+BACKLIGHT on=0 brightness=77 duty=0 boot_level=1
+I (79542) voice: test output 今天是2026年10月7日，星期三。
+I (82822) voice: test response status=completed reason= error= message= output=1
+I (99282) voice: test output 好，两条新闻：一是纬创押注英伟达服务器业务，今年营收已超550亿美元；二是谷歌DeepMind新设AI“准备度”官，专注应对技术风险。你想听哪方面的细节？
+I (109612) voice: test response status=completed reason= error= message= output=1
+STATUS online=1 time=1 sd=1 imu=1 audio=1 voice=1 heap=7301496 internal=16391 tasks=25
+BACKLIGHT on=0 brightness=77 duty=0 boot_level=1
+I (142732) voice: test output 纬创八年前押注英伟达，靠代工服务器业务爆发，今年营收已超550亿美元，其中七成来自服务器。
+I (149022) voice: test response status=completed reason= error= message= output=1
+I (158532) voice: test response status=completed reason= error= message= output=2
+I (163602) voice: test output 中山现在21.7度，天气晴朗。今天最高28度，最低19度，早晚温差大，记得加件外套。
+I (169572) voice: test response status=completed reason= error= message= output=1
+STATUS online=1 time=1 sd=1 imu=1 audio=1 voice=1 heap=7288696 internal=15667 tasks=25
+BACKLIGHT on=1 brightness=77 duty=787 boot_level=1
+I (216532) voice: test output 太阳系的八大行星，从离太阳最近的水星开始，依次是金星、地球、火星，接着是木星、土星、天王星和海王星。水星是离太阳最近的行星，表面温差极大；金星则是最热的行星，大气层非常浓厚。地球是我们居住的家园，拥有适宜生命存在的条件。火星则被称为红色星球，科学家们一直在探索其上是否存在过生命。木星和土星是气态巨行星，拥有众多卫星和壮观的环系统。天王星和海王星则是冰巨星，距离太阳最远。
+STATUS online=1 time=1 sd=1 imu=1 audio=1 voice=1 heap=7264532 internal=14695 tasks=25
+BACKLIGHT on=1 brightness=77 duty=787 boot_level=1
+AUDIO_PROBE amp=1 pin=1 playing=1 volume=65 mean_abs=16263/1923/1023 peak=32768/10562/6674
+STATUS online=1 time=1 sd=1 imu=1 audio=1 voice=0 heap=7464076 internal=62027 tasks=24
+BACKLIGHT on=1 brightness=77 duty=787 boot_level=1
+
+[release-smoke-run.log]
+I (360122) voice: test output 今天是2026年10月7日，星期三。
+I (363252) voice: test response status=completed reason= error= message= output=1
+I (378072) voice: test output 今天还没搜到新闻。稍后我再帮你看看。
+I (381532) voice: test response status=completed reason= error= message= output=1
+STATUS online=1 time=1 sd=1 imu=1 audio=1 voice=1 heap=7301724 internal=18183 tasks=25
+BACKLIGHT on=1 brightness=77 duty=787 boot_level=1
+AUDIO_PROBE amp=1 pin=1 playing=1 volume=65 mean_abs=13811/623/245 peak=32768/5607/2402
+STATUS online=1 time=1 sd=1 imu=1 audio=1 voice=0 heap=7461232 internal=62347 tasks=24
+BACKLIGHT on=1 brightness=77 duty=787 boot_level=1

@@ -78,7 +78,7 @@ static void tiles_refresh(void) {
     snprintf(text, sizeof(text), "%d / 12 组", garden.matches);
     lv_label_set_text(hud, text);
     visible(banner, garden.won || garden.lost);
-    lv_label_set_text(banner, garden.won ? "全部消除！" : "槽位已满 · 可撤回或重开");
+    lv_label_set_text(banner, garden.won ? "全部消除！" : "槽位已满 / 可撤回或重开");
 }
 static void tile_click(lv_event_t *e) {
     if (tiles_pick(&garden, (intptr_t)lv_event_get_user_data(e)))
@@ -307,7 +307,7 @@ void games_tick(void) {
     lv_label_set_text(hud, s);
     visible(banner, flight.over);
     if (flight.over) {
-        snprintf(s, sizeof(s), "任务结束 · 得分 %d", flight.score);
+        snprintf(s, sizeof(s), "任务结束 / 得分 %d", flight.score);
         lv_label_set_text(banner, s);
     }
 }

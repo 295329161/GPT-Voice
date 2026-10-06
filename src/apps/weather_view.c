@@ -76,48 +76,63 @@ static const char *weather_name(int c) {
         return "阵雪";
     return "雷雨";
 }
-void weather_view_update(const terminal_state_t *s) {
+static void update(const terminal_state_t *s, int preview_code, bool preview_night) {
     time_t now = time(NULL);
     struct tm t;
     localtime_r(&now, &t);
+    bool preview = preview_code >= 0;
+    int code = preview ? preview_code : s->weather_code;
+    bool valid = preview || s->weather_valid;
+    if (preview) {
+        t.tm_hour = preview_night ? 21 : 12;
+        t.tm_min = 0;
+    }
     char text[128];
-    night = s->time_valid && (t.tm_hour < 6 || t.tm_hour >= 18);
-    rain = s->weather_valid && s->weather_code >= 51 &&
-           !(s->weather_code >= 71 && s->weather_code <= 77) &&
-           !(s->weather_code >= 85 && s->weather_code <= 86);
-    snow = s->weather_valid && ((s->weather_code >= 71 && s->weather_code <= 77) ||
-                                (s->weather_code >= 85 && s->weather_code <= 86));
-    cloudy = s->weather_valid && s->weather_code > 0;
+    night = (preview || s->time_valid) && (t.tm_hour < 6 || t.tm_hour >= 18);
+    rain = valid && code >= 51 && !(code >= 71 && code <= 77) && !(code >= 85 && code <= 86);
+    snow = valid && ((code >= 71 && code <= 77) || (code >= 85 && code <= 86));
+    cloudy = valid && code > 0;
     lv_obj_set_style_bg_color(root, lv_color_hex(night ? 0x142440 : rain ? 0x38546c : 0x286eab), 0);
     lv_obj_set_style_bg_grad_color(root,
                                    lv_color_hex(night  ? 0x34465f
                                                 : rain ? 0x728e9f
                                                        : 0x79aec8),
                                    0);
-    lv_label_set_text(city, s->weather_city[0] ? s->weather_city : "中山");
+    lv_label_set_text(city,
+                      preview ? "天气效果预览" : (s->weather_city[0] ? s->weather_city : "中山"));
+    lv_obj_set_x(city, preview ? 44 : 20);
 
-    if (s->time_valid) {
+    if (preview || s->time_valid) {
         strftime(text, sizeof(text), "%H:%M", &t);
         lv_label_set_text(clock_text, text);
         snprintf(text, sizeof(text), "%d月%d日  星期%s", t.tm_mon + 1, t.tm_mday,
                  (const char *[]){"日", "一", "二", "三", "四", "五", "六"}[t.tm_wday]);
     } else
         snprintf(text, sizeof(text), "--月--日");
+    if (preview)
+        snprintf(text, sizeof(text), "%s / %s（演示）", night ? "夜晚" : "白天",
+                 weather_name(code));
     lv_label_set_text(date_text, text);
-    if (s->weather_valid) {
-        snprintf(text, sizeof(text), "%.0f°", s->temperature);
+    if (valid) {
+        snprintf(text, sizeof(text), "%.0f°",
+                 preview ? (snow    ? -2.f
+                            : rain  ? 20.f
+                            : night ? 21.f
+                                    : 28.f)
+                         : s->temperature);
         lv_label_set_text(temperature, text);
-        snprintf(text, sizeof(text), "%s%s", weather_name(s->weather_code),
-                 (s->weather_error[0] || !s->online) ? " · 缓存" : "");
+        snprintf(text, sizeof(text), "%s%s", weather_name(code),
+                 (!preview && (s->weather_error[0] || !s->online)) ? " / 缓存" : "");
         lv_label_set_text(condition, text);
         snprintf(text, sizeof(text), "体感 %.0f°    最低 %.0f° / 最高 %.0f°", s->feels, s->low,
                  s->high);
     } else {
         lv_label_set_text(temperature, "--°");
         lv_label_set_text(condition, "天气更新中");
-        snprintf(text, sizeof(text), "中山 · 实时天气");
+        snprintf(text, sizeof(text), "中山 / 实时天气");
     }
     lv_label_set_text(range, text);
+    show(range, !preview);
     lv_img_set_src(sun, night ? &art_moon : &art_sun);
     show(sun, !rain && !snow);
     for (int i = 0; i < 2; i++)
@@ -128,6 +143,12 @@ void weather_view_update(const terminal_state_t *s) {
         show(drops[i], rain || snow);
         lv_obj_set_size(drops[i], snow ? 3 : 2, snow ? 3 : 9);
     }
+}
+void weather_view_update(const terminal_state_t *s) {
+    update(s, -1, false);
+}
+void weather_view_preview(const terminal_state_t *s, int code, bool night_preview) {
+    update(s, code, night_preview);
 }
 void weather_view_animate(void) {
     float t = lv_tick_get() / 1000.f;

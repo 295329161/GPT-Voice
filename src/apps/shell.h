@@ -2,6 +2,7 @@
 #include "lvgl.h"
 void shell_init(void);
 void shell_open(int app);
+void shell_voice_sources(bool show);
 lv_obj_t *ui_label(lv_obj_t *parent, const char *text, int x, int y, int width);
 lv_obj_t *ui_button(lv_obj_t *parent, const char *text, int x, int y, int width, lv_event_cb_t cb,
                     void *data);
@@ -22,3 +23,5 @@ typedef struct {
 } terminal_app_t;
 bool shell_register_app(const terminal_app_t *app);
 lv_obj_t *shell_content(void);
+void shell_input_text(const char *text);
+void shell_diagnostics(void);

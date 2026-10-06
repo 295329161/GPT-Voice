@@ -1,8 +1,11 @@
 #include "shell.h"
+#include "esp_app_desc.h"
 #include "core/terminal.h"
+#include "core/image_info.h"
 #include "esp32_s3_szp.h"
 #include "esp_heap_caps.h"
 #include "weather_view.h"
+#include "music_view.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -29,7 +32,8 @@ enum {
     TILES,
     FLOOD,
     FILE_DETAIL,
-    IMAGE_VIEW
+    IMAGE_VIEW,
+    WEATHER_PREVIEW
 };
 static void settings_page(void), music_page(void), games_page(void), pictures_page(void),
     voice_page(void), files_page(void), ha_page(void);
@@ -40,18 +44,6 @@ static void voice_leave(void) {
     voice_request(false);
 }
 static const terminal_app_t defaults[] = {
-    {.id = SETTINGS,
-     .name = "设置",
-     .icon = LV_SYMBOL_SETTINGS,
-     .color = 0x90a4c1,
-     .create = settings_page},
-    {.id = MUSIC, .name = "音乐", .icon = LV_SYMBOL_AUDIO, .color = 0xe97cac, .create = music_page},
-    {.id = GAMES, .name = "游戏", .icon = LV_SYMBOL_PLAY, .color = 0xa58af9, .create = games_page},
-    {.id = PICTURES,
-     .name = "图片",
-     .icon = LV_SYMBOL_IMAGE,
-     .color = 0xf4b85b,
-     .create = pictures_page},
     {.id = VOICE,
      .name = "GPT Voice",
      .icon = LV_SYMBOL_CALL,
@@ -59,6 +51,18 @@ static const terminal_app_t defaults[] = {
      .create = voice_page,
      .enter = voice_enter,
      .leave = voice_leave},
+    {.id = MUSIC, .name = "音乐", .icon = LV_SYMBOL_AUDIO, .color = 0xe97cac, .create = music_page},
+    {.id = GAMES, .name = "游戏", .icon = LV_SYMBOL_PLAY, .color = 0xa58af9, .create = games_page},
+    {.id = PICTURES,
+     .name = "图片",
+     .icon = LV_SYMBOL_IMAGE,
+     .color = 0xf4b85b,
+     .create = pictures_page},
+    {.id = SETTINGS,
+     .name = "设置",
+     .icon = LV_SYMBOL_SETTINGS,
+     .color = 0x90a4c1,
+     .create = settings_page},
     {.id = FILES,
      .name = "文件管理",
      .icon = LV_SYMBOL_DIRECTORY,
@@ -95,13 +99,22 @@ static int active = HOME, pending = -1, menu_page;
 static int history[12], history_count;
 static bool going_back;
 static unsigned file_generation, wifi_generation, ble_generation;
-static char selected[PATH_SIZE], image_source[PATH_SIZE + 3];
+static unsigned notice_generation, navigation_notice_generation;
+static uint32_t notice_started;
+static char selected[PATH_SIZE];
+static lv_img_dsc_t image_encoded;
+static uint8_t *image_bytes;
 static bool selected_dir, file_held;
 static uint64_t selected_size;
 static terminal_state_t *snapshot;
 static int confirm_action;
+static int preview_scene;
+static bool preview_night;
+static const int preview_codes[] = {0, 3, 63, 73};
 static bool dialog;
 static bool voice_follow_latest, voice_dragging;
+static bool voice_show_sources;
+static lv_obj_t *voice_sources_button;
 lv_obj_t *shell_content(void) {
     return content;
 }
@@ -132,10 +145,12 @@ lv_obj_t *ui_button(lv_obj_t *p, const char *s, int x, int y, int w, lv_event_cb
     return b;
 }
 static void back(lv_event_t *e) {
+    navigation_notice_generation = snapshot->notice_generation;
     going_back = true;
     pending = history_count ? history[--history_count] : HOME;
 }
 void shell_open(int app) {
+    navigation_notice_generation = snapshot->notice_generation;
     pending = app;
     going_back = false;
 }
@@ -260,7 +275,7 @@ static void level_page(bool sound) {
 }
 static void wifi_connect(lv_event_t *e) {
     terminal_submit(JOB_WIFI_CONNECT, lv_textarea_get_text(edit_a), lv_textarea_get_text(edit_b),
-                    0);
+                    1);
     lv_obj_add_flag(keyboard, LV_OBJ_FLAG_HIDDEN);
 }
 static void wifi_select(lv_event_t *e) {
@@ -273,7 +288,7 @@ static void wifi_page(void) {
     ui_button(content, "连接", 88, 0, 80, wifi_connect, NULL);
     info = ui_label(content, "", 177, 4, 122);
     edit_a = input("SSID", 38, 32, false);
-    edit_b = input("Wi-Fi 密码", 81, 63, true);
+    edit_b = input("密码（当前网络留空保留）", 81, 63, true);
     lv_textarea_set_text(edit_a, config.ssid);
     list = lv_list_create(content);
     lv_obj_set_pos(list, 0, 124);
@@ -296,11 +311,27 @@ static void city_save(lv_event_t *e) {
     terminal_submit(JOB_CITY, lv_textarea_get_text(edit_a), NULL, 0);
     lv_obj_add_flag(keyboard, LV_OBJ_FLAG_HIDDEN);
 }
+static void preview_change(lv_event_t *e) {
+    if ((intptr_t)lv_event_get_user_data(e))
+        preview_night = !preview_night;
+    else
+        preview_scene = (preview_scene + 1) % 4;
+}
+static void weather_preview_page(void) {
+    preview_scene = 0;
+    preview_night = false;
+    weather_view_create(content);
+    ui_button(screen, LV_SYMBOL_LEFT, 4, 3, 32, back, NULL);
+    ui_button(content, "切换天气", 16, 196, 140, preview_change, NULL);
+    ui_button(content, "切换昼夜", 164, 196, 140, preview_change, (void *)1);
+    weather_view_preview(snapshot, preview_codes[preview_scene], preview_night);
+}
 static void weather_page(void) {
     ui_label(content, "输入城市中文名或拼音", 0, 0, 294);
     edit_a = input("例如 Shanghai", 36, 79, false);
     lv_textarea_set_text(edit_a, config.city);
     ui_button(content, "查找并保存", 0, 85, 150, city_save, NULL);
+    ui_button(content, "效果预览", 160, 85, 134, navigate, (void *)WEATHER_PREVIEW);
     ui_label(
         content,
         "数据来自 Open-Meteo\n每 15 分钟更新，断网保留缓存。\n同名城市请在网页中使用更明确的名称。",
@@ -317,23 +348,12 @@ static void web_page(void) {
         "网页填写 StepFun 密钥、声音与城市。\n网页搜索使用可选 Tavily Key。\n密钥留空保留原配置。",
         0, 104, 294);
 }
-static void music_toggle(lv_event_t *e) {
-    terminal_submit(JOB_MUSIC_TOGGLE, NULL, NULL, 0);
-}
-static void music_next(lv_event_t *e) {
-    terminal_submit(JOB_MUSIC_NEXT, NULL, NULL, (intptr_t)lv_event_get_user_data(e));
-}
 static void browse_music(lv_event_t *e) {
     strcpy(target_dir, "/sdcard/Music");
     shell_open(FILES);
 }
 static void music_page(void) {
-    info = ui_label(content, "", 0, 0, 294);
-    ui_button(content, LV_SYMBOL_PREV, 0, 97, 70, music_next, (void *)-1);
-    ui_button(content, "播放/暂停", 77, 97, 136, music_toggle, NULL);
-    ui_button(content, LV_SYMBOL_NEXT, 220, 97, 70, music_next, (void *)1);
-    ui_button(content, "音乐文件", 0, 143, 142, browse_music, NULL);
-    ui_button(content, "音量", 150, 143, 142, navigate, (void *)SOUND);
+    music_view_create(content, back, browse_music);
 }
 static void games_page(void) {
     ui_button(content, "雷电突击", 0, 4, 294, navigate, (void *)SHOOTER);
@@ -361,15 +381,34 @@ static void voice_scroll(lv_event_t *e) {
 }
 static void voice_latest(lv_event_t *e) {
     (void)e;
+    voice_show_sources = false;
+    lv_label_set_text(lv_obj_get_child(voice_sources_button, 0), "来源");
     voice_follow_latest = true;
     voice_dragging = false;
     lv_obj_update_layout(list);
     lv_obj_scroll_to_y(list, LV_COORD_MAX, LV_ANIM_OFF);
 }
+void shell_voice_sources(bool show) {
+    if (active != VOICE) return;
+    voice_show_sources = show;
+    voice_follow_latest = !show;
+    voice_dragging = false;
+    lv_label_set_text(lv_obj_get_child(voice_sources_button, 0), show ? "对话" : "来源");
+    lv_label_set_text(lv_obj_get_child(list, 0), show ?
+                      (*snapshot->voice_sources ? snapshot->voice_sources : "搜索后可在这里查看来源。") : snapshot->transcript);
+    lv_obj_update_layout(list);
+    lv_obj_scroll_to_y(list, show ? 0 : LV_COORD_MAX, LV_ANIM_OFF);
+}
+static void voice_sources_toggle(lv_event_t *e) {
+    (void)e;
+    shell_voice_sources(!voice_show_sources);
+}
 static void voice_page(void) {
     voice_follow_latest = true;
     voice_dragging = false;
-    info = ui_label(content, "正在连接…", 0, 0, 232);
+    voice_show_sources = false;
+    info = ui_label(content, "正在连接...", 0, 0, 174);
+    voice_sources_button = ui_button(content, "来源", 180, 0, 54, voice_sources_toggle, NULL);
     ui_button(content, "最新", 240, 0, 54, voice_latest, NULL);
     list = lv_obj_create(content);
     lv_obj_set_pos(list, 0, 38);
@@ -404,6 +443,9 @@ static void file_select(lv_event_t *e) {
     selected_dir = f->directory;
     selected_size = f->size;
     if (lv_event_get_code(e) == LV_EVENT_LONG_PRESSED) {
+        // The new page may place its Open button under the held finger.
+        // Consume the release so it cannot click through into that page.
+        lv_indev_wait_release(lv_indev_get_act());
         file_held = true;
         shell_open(FILE_DETAIL);
         return;
@@ -459,7 +501,9 @@ static void delete_ask(lv_event_t *e) {
     dialog = true;
     lv_obj_clean(content);
     ui_label(content, "确认删除？操作不能撤销。", 0, 0, 294);
-    ui_label(content, selected + 8, 0, 40, 294);
+    lv_obj_t *name = ui_label(content, selected + 8, 0, 40, 294);
+    lv_label_set_long_mode(name, LV_LABEL_LONG_DOT);
+    lv_obj_set_height(name, 72);
     ui_button(content, "确认删除", 0, 122, 140, delete_confirm, NULL);
     ui_button(content, "取消", 154, 122, 140, navigate, (void *)FILES);
 }
@@ -469,6 +513,8 @@ static void files_page(void) {
     ui_button(content, "上级", 146, 0, 66, up, NULL);
     ui_button(content, "刷新", 219, 0, 73, refresh_files, NULL);
     info = ui_label(content, "", 0, 37, 294);
+    lv_label_set_long_mode(info, LV_LABEL_LONG_DOT);
+    lv_obj_set_height(info, 18);
     list = lv_list_create(content);
     lv_obj_set_pos(list, 0, 61);
     lv_obj_set_size(list, 294, 160);
@@ -499,14 +545,16 @@ static void open_file(lv_event_t *e) {
         terminal_notice("此文件类型暂不支持打开");
 }
 static void file_detail(void) {
-    ui_label(content, selected + 8, 0, 0, 294);
+    lv_obj_t *name = ui_label(content, selected + 8, 0, 0, 294);
+    lv_label_set_long_mode(name, LV_LABEL_LONG_DOT);
+    lv_obj_set_height(name, 36);
     char detail[64];
     snprintf(detail, sizeof(detail), selected_dir ? "文件夹" : "大小：%llu 字节",
              (unsigned long long)selected_size);
     ui_label(content, detail, 0, 40, 294);
     ui_button(content, "打开", 0, 66, 294, open_file, NULL);
     ui_button(content, "重命名", 0, 109, 141, name_dialog, (void *)JOB_RENAME);
-    ui_button(content, "删除…", 151, 109, 141, delete_ask, NULL);
+    ui_button(content, "删除...", 151, 109, 141, delete_ask, NULL);
 }
 static void image_next(lv_event_t *e) {
     int direction = (intptr_t)lv_event_get_user_data(e), found = -1;
@@ -536,15 +584,29 @@ static void image_page(void) {
         ui_label(content, "图片不可用或超过 1 MB", 0, 25, 294);
         return;
     }
-    snprintf(image_source, sizeof(image_source), "S:%s", selected + 7);
-    lv_img_header_t h;
-    if (lv_img_decoder_get_info(image_source, &h) != LV_RES_OK || !h.w || !h.h ||
-        (uint64_t)h.w * h.h > 1024 * 1024) {
+    image_bytes = heap_caps_malloc(st.st_size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    FILE *f = image_bytes ? fopen(selected, "rb") : NULL;
+    size_t read = f ? fread(image_bytes, 1, st.st_size, f) : 0;
+    if (f) fclose(f);
+    unsigned width = 0, height = 0;
+    if (read != (size_t)st.st_size || !image_dimensions(image_bytes, read, &width, &height)) {
+        free(image_bytes);
+        image_bytes = NULL;
+        ui_label(content, "图片格式或尺寸不支持", 0, 25, 294);
+        return;
+    }
+    // Decode from the verified bounded buffer: filename case, .jpeg suffixes
+    // and the upstream stdio driver's 256-byte path limit no longer interfere.
+    image_encoded = (lv_img_dsc_t){.data_size = read, .data = image_bytes};
+    lv_img_header_t h = {0};
+    if (lv_img_decoder_get_info(&image_encoded, &h) != LV_RES_OK || h.w != width || h.h != height) {
+        free(image_bytes);
+        image_bytes = NULL;
         ui_label(content, "图片格式或尺寸不支持", 0, 25, 294);
         return;
     }
     picture = lv_img_create(content);
-    lv_img_set_src(picture, image_source);
+    lv_img_set_src(picture, &image_encoded);
     uint32_t zoom = 256;
     if (h.w > 294 || h.h > 145) {
         uint32_t a = 294 * 256 / h.w, b = 145 * 256 / h.h;
@@ -575,13 +637,19 @@ static void render(int page) {
     }
     games_destroy();
     dialog = false;
+    file_held = false;
     active = page;
     lv_obj_clean(screen);
+    if (image_bytes) {
+        lv_img_cache_invalidate_src(&image_encoded);
+        free(image_bytes);
+        image_bytes = NULL;
+    }
     info = list = picture = NULL;
     bool game = page == SHOOTER || page == TILES || page == FLOOD;
     heading = ui_label(screen, "", 46, 9, 185);
     game_bar = screen;
-    if (page != HOME) {
+    if (page != HOME && page != WEATHER_PREVIEW && page != MUSIC) {
         ui_button(screen, LV_SYMBOL_LEFT, 4, 3, 32, back, (void *)MENU);
         if (!game)
             ui_button(screen, LV_SYMBOL_HOME, 244, 3, 34, navigate, (void *)HOME);
@@ -599,7 +667,7 @@ static void render(int page) {
         lv_obj_set_size(content, 312, 200);
         lv_obj_add_flag(heading, LV_OBJ_FLAG_HIDDEN);
     }
-    if (page == HOME) {
+    if (page == HOME || page == WEATHER_PREVIEW || page == MUSIC) {
         lv_obj_set_pos(content, 0, 0);
         lv_obj_set_size(content, 320, 240);
     }
@@ -612,8 +680,8 @@ static void render(int page) {
     lv_obj_set_style_text_color(notice, lv_color_hex(0xa7bed8), 0);
     lv_label_set_long_mode(notice, LV_LABEL_LONG_DOT);
     lv_obj_set_height(notice, 18);
-    if (page == HOME || page == MENU || page == SHOOTER || page == TILES || page == FLOOD)
-        lv_obj_add_flag(notice, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(notice, LV_OBJ_FLAG_HIDDEN);
+    notice_generation = navigation_notice_generation;
     keyboard = lv_keyboard_create(screen);
     lv_obj_set_size(keyboard, 320, 125);
     lv_obj_align(keyboard, LV_ALIGN_BOTTOM_MID, 0, 0);
@@ -654,6 +722,11 @@ static void render(int page) {
         title = "蓝牙";
         ble_page();
         break;
+    case WEATHER_PREVIEW:
+        title = "天气效果预览";
+        weather_preview_page();
+        lv_obj_add_flag(heading, LV_OBJ_FLAG_HIDDEN);
+        break;
     case WEATHER:
         title = "天气城市";
         weather_page();
@@ -691,6 +764,10 @@ ready:
     top_wifi = ui_label(screen, LV_SYMBOL_WIFI, 290, 10, 26);
     lv_obj_set_style_text_font(top_wifi, &lv_font_montserrat_16, 0);
     lv_obj_set_style_text_opa(top_wifi, snapshot->online ? 255 : 55, 0);
+    if (page == MUSIC) {
+        lv_obj_add_flag(heading, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_set_style_text_color(top_wifi, lv_color_hex(0x92727e), 0);
+    }
     lv_label_set_text(heading, title);
     if (page == HOME) {
         lv_obj_add_flag(heading, LV_OBJ_FLAG_HIDDEN);
@@ -710,11 +787,22 @@ static void tick(lv_timer_t *timer) {
     }
     lv_obj_set_style_text_opa(top_wifi, snapshot->online ? 255 : 55, 0);
     char text[768];
-    lv_label_set_text(notice, active == HOME ? "天气数据 Open-Meteo" : snapshot->notice);
+    // Notifications are temporary and do not follow the user between apps.
+    if (notice_generation != snapshot->notice_generation) {
+        notice_generation = snapshot->notice_generation;
+        notice_started = lv_tick_get();
+        lv_label_set_text(notice, snapshot->notice);
+        if (snapshot->notice[0]) lv_obj_clear_flag(notice, LV_OBJ_FLAG_HIDDEN);
+        else lv_obj_add_flag(notice, LV_OBJ_FLAG_HIDDEN);
+    }
+    if (lv_tick_elaps(notice_started) >= 4500)
+        lv_obj_add_flag(notice, LV_OBJ_FLAG_HIDDEN);
     if (dialog)
         return;
     if (active == HOME)
         weather_view_update(snapshot);
+    if (active == WEATHER_PREVIEW)
+        weather_view_preview(snapshot, preview_codes[preview_scene], preview_night);
     if (active == DISPLAY || active == SOUND) {
         snprintf(text, sizeof(text), "当前：%d",
                  active == DISPLAY ? config.brightness : config.volume);
@@ -729,6 +817,7 @@ static void tick(lv_timer_t *timer) {
             lv_label_set_text(info, "SD 卡未挂载");
         if (file_generation != snapshot->files_generation) {
             file_generation = snapshot->files_generation;
+            snprintf(target_dir, sizeof(target_dir), "%s", snapshot->directory);
             lv_obj_clean(list);
             for (int i = 0; i < snapshot->file_count; i++) {
                 file_entry_t *f = &snapshot->files[i];
@@ -771,17 +860,16 @@ static void tick(lv_timer_t *timer) {
         lv_label_set_text(info, text);
     }
     if (active == MUSIC) {
-        const char *name = strrchr(snapshot->music_path, '/');
-        snprintf(text, sizeof(text), "%s\n%s", name ? name + 1 : "SD 卡 /Music",
-                 snapshot->music_status);
-        lv_label_set_text(info, text);
+        music_view_update(snapshot);
     }
     if (active == VOICE) {
         lv_label_set_text(info, snapshot->voice_status);
         lv_obj_t *l = lv_obj_get_child(list, 0);
-        if (strcmp(lv_label_get_text(l), snapshot->transcript)) {
-            bool follow = voice_follow_latest;
-            lv_label_set_text(l, snapshot->transcript);
+        const char *text = voice_show_sources ?
+            (*snapshot->voice_sources ? snapshot->voice_sources : "搜索后可在这里查看来源。") : snapshot->transcript;
+        if (strcmp(lv_label_get_text(l), text)) {
+            bool follow = voice_follow_latest && !voice_show_sources;
+            lv_label_set_text(l, text);
             lv_obj_update_layout(list);
             if (follow)
                 lv_obj_scroll_to_y(list, LV_COORD_MAX, LV_ANIM_OFF);
@@ -789,15 +877,15 @@ static void tick(lv_timer_t *timer) {
     }
     if (active == ABOUT) {
         snprintf(text, sizeof(text),
-                 "桌面终端 v0.1\nESP32-S3 · ESP-IDF 5.5\nIP: %s\n可用内存：%u KB\nPSRAM：%u KB",
-                 snapshot->ip, (unsigned)esp_get_free_heap_size() / 1024,
+                 "桌面终端 v%s\nESP32-S3 / ESP-IDF 5.5\nIP: %s\n可用内存：%u KB\nPSRAM：%u KB",
+                 esp_app_get_description()->version, snapshot->ip, (unsigned)esp_get_free_heap_size() / 1024,
                  (unsigned)heap_caps_get_free_size(MALLOC_CAP_SPIRAM) / 1024);
         lv_label_set_text(info, text);
     }
 }
 static void game_timer(lv_timer_t *t) {
     games_tick();
-    if (active == HOME)
+    if (active == HOME || active == WEATHER_PREVIEW)
         weather_view_animate();
 }
 void shell_init(void) {
@@ -820,4 +908,23 @@ void shell_init(void) {
     render(HOME);
     lv_timer_create(tick, 150, NULL);
     lv_timer_create(game_timer, 20, NULL);
+}
+
+// Serial diagnostics operate the same LVGL input and callbacks as the display.
+void shell_input_text(const char *text) {
+    lv_obj_t *area = lv_keyboard_get_textarea(keyboard);
+    if (area && lv_obj_is_valid(area)) lv_textarea_set_text(area, text);
+}
+static void describe(lv_obj_t *o, unsigned depth) {
+    if (lv_obj_has_flag(o, LV_OBJ_FLAG_HIDDEN) || depth > 10) return;
+    lv_area_t a;
+    lv_obj_get_coords(o, &a);
+    if (lv_obj_check_type(o, &lv_label_class))
+        printf("UI %d,%d-%d,%d %.100s\n", a.x1,a.y1,a.x2,a.y2,lv_label_get_text(o));
+    for (unsigned i=0;i<lv_obj_get_child_cnt(o);i++) describe(lv_obj_get_child(o,i),depth+1);
+}
+void shell_diagnostics(void) {
+    lv_obj_update_layout(screen);
+    printf("PAGE active=%d dialog=%d\n", active, dialog);
+    describe(screen, 0);
 }

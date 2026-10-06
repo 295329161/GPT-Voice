@@ -34,6 +34,8 @@ typedef struct {
     char web_code[16];
     uint64_t sd_total, sd_free;
     char ip[20], notice[192], weather_error[128], weather_city[80], weather_time[40];
+    unsigned notice_generation;
+    bool backlight_on;
     float temperature, feels, low, high;
     int weather_code;
     time_t weather_updated;
@@ -50,7 +52,9 @@ typedef struct {
     unsigned ble_generation;
     char ble_status[160];
     char music_path[PATH_SIZE], music_status[128];
-    char voice_status[160], transcript[32768];
+    bool music_playing, music_paused;
+    int64_t music_elapsed_ms, music_started_ms;
+    char voice_status[160], transcript[32768], voice_sources[8192];
     bool voice_active;
     unsigned revision;
 } terminal_state_t;
@@ -61,8 +65,15 @@ void state_lock(void);
 void state_unlock(void);
 void terminal_notice(const char *fmt, ...);
 void config_snapshot(terminal_config_t *out);
-esp_err_t terminal_config_save(const terminal_config_t *value);
+typedef enum {
+    CONFIG_BRIGHTNESS, CONFIG_VOLUME, CONFIG_SENSITIVITY, CONFIG_WIFI,
+    CONFIG_LOCATION, CONFIG_VOICE, CONFIG_SCORE
+} config_field_t;
+esp_err_t terminal_config_update(const terminal_config_t *value, config_field_t field);
 void terminal_init(void);
+void backlight_init(void);
+void backlight_toggle(void);
+void backlight_refresh(void);
 
 typedef enum {
     JOB_WIFI_SCAN,
@@ -84,7 +95,10 @@ typedef enum {
     JOB_VOICE_START,
     JOB_VOICE_STOP,
     JOB_LEVELS,
-    JOB_SCORE
+    JOB_SCORE,
+    JOB_VOICE_TEST,
+    JOB_AUDIO_PROBE,
+    JOB_FIXTURES
 } job_kind_t;
 typedef struct {
     job_kind_t kind;
@@ -100,7 +114,8 @@ bool storage_name_valid(const char *name);
 void media_init(void);
 void media_job(const terminal_job_t *job);
 esp_err_t media_suspend(void);
-void media_resume_clock(void);
+esp_err_t media_resume_clock(void);
+void media_audio_probe(void);
 bool media_busy_path(const char *path);
 void ble_init(void);
 void ble_job(const terminal_job_t *job);
@@ -110,6 +125,8 @@ void voice_init(void);
 void voice_request(bool enable);
 void voice_poll(void);
 void voice_diagnostics(void);
+void voice_test_prompt(const char *text);
 void sensors_init(void);
 char *weather_tool(const char *city);
 char *search_tool(const char *query);
+void diagnostics_fixtures(bool create);

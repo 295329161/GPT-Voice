@@ -1,0 +1,45 @@
+[
+  {
+    "test": "wrong-token",
+    "status": 403,
+    "expected": 403,
+    "pass": true
+  },
+  {
+    "test": "bad-endpoint",
+    "status": 400,
+    "expected": 400,
+    "pass": true
+  },
+  {
+    "test": "header-injection",
+    "status": 400,
+    "expected": 400,
+    "pass": true
+  },
+  {
+    "test": "oversize",
+    "status": 400,
+    "expected": 400,
+    "pass": true
+  },
+  {
+    "test": "preserve-blank-fields",
+    "status": 200,
+    "expected": 200,
+    "pass": true
+  },
+  {
+    "test": "web-get",
+    "status": 200,
+    "pass": true
+  },
+  {
+    "test": "web-render",
+    "pass": true
+  },
+  {
+    "test": "web-close",
+    "pass": true
+  }
+]

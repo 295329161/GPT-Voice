@@ -12,22 +12,13 @@ bool is_mp3(FILE *fp) {
     // see https://en.wikipedia.org/wiki/List_of_file_signatures
     uint8_t magic[3];
     if(sizeof(magic) == fread(magic, 1, sizeof(magic), fp)) {
-        if((magic[0] == 0xFF) &&
-            (magic[1] == 0xFB))
-        {
+        // MPEG 1/2/2.5 Layer III, with or without CRC. Reject reserved
+        // version, layer, bitrate and sample-rate fields.
+        if (magic[0] == 0xff && (magic[1] & 0xe0) == 0xe0 &&
+            (magic[1] & 0x18) != 0x08 && (magic[1] & 0x06) == 0x02 &&
+            (magic[2] & 0xf0) != 0xf0 && (magic[2] & 0x0c) != 0x0c) {
             is_mp3_file = true;
-        } else if((magic[0] == 0xFF) &&
-                  (magic[1] == 0xF3))
-        {
-            is_mp3_file = true;
-        } else if((magic[0] == 0xFF) &&
-                  (magic[1] == 0xF2))
-        {
-            is_mp3_file = true;
-        } else if((magic[0] == 0x49) &&
-                  (magic[1] == 0x44) &&
-                  (magic[2] == 0x33)) /* 'ID3' */
-        {
+        } else if (!memcmp(magic, "ID3", 3))        {
             fseek(fp, 0, SEEK_SET);
 
             /* Get ID3 head */

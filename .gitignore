@@ -4,3 +4,4 @@ sdkconfig.szp_s3
 backups/
 artifacts/
 __pycache__/
+.idea/

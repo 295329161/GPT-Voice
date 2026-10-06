@@ -1,81 +1,69 @@
 #include <string.h>
-#include <stdio.h>
 #include "audio_wav.h"
 
-static const char *TAG = "wav";
+static uint16_t le16(const uint8_t *p) { return p[0] | (uint16_t)p[1] << 8; }
+static uint32_t le32(const uint8_t *p) { return le16(p) | (uint32_t)le16(p + 2) << 16; }
 
-/**
- * @param fp
- * @param pInstance - Values can be considered valid if true is returned
- * @return true if file is a wav file
- */
-bool is_wav(FILE *fp, wav_instance *pInstance) {
-    fseek(fp, 0, SEEK_SET);
-
-    size_t bytes_read = fread(&pInstance->header, 1, sizeof(wav_header_t), fp);
-    if(bytes_read != sizeof(wav_header_t)) {
-        return false;
-    }
-
-    wav_header_t *wav_head = &pInstance->header;
-    if((NULL == strstr(reinterpret_cast<char *>(wav_head->ChunkID), "RIFF")) ||
-        (NULL == strstr(reinterpret_cast<char*>(wav_head->Format), "WAVE"))
-      )
-    {
-        return false;
-    }
-
-    // decode chunks until we find the 'data' one
-    wav_subchunk_header_t subchunk;
-    while(true) {
-        bytes_read = fread(&subchunk, 1, sizeof(wav_subchunk_header_t), fp);
-        if(bytes_read != sizeof(wav_subchunk_header_t)) {
-            return false;
+// The board's codec path supports PCM16 mono/stereo. Treat RIFF lengths as
+// untrusted, including metadata padding and the declared data boundary.
+bool is_wav(FILE *fp, wav_instance *instance) {
+    if (!fp || !instance) return false;
+    *instance = {};
+    if (fseek(fp, 0, SEEK_END)) return false;
+    long length = ftell(fp);
+    if (length < 12 || fseek(fp, 0, SEEK_SET)) return false;
+    uint8_t riff[12];
+    if (fread(riff, 1, 12, fp) != 12 || memcmp(riff, "RIFF", 4) || memcmp(riff + 8, "WAVE", 4)) return false;
+    uint64_t end = (uint64_t)le32(riff + 4) + 8;
+    if (end < 12 || end > (uint64_t)length) return false;
+    bool have_format = false;
+    uint64_t pos = 12;
+    while (pos + 8 <= end) {
+        uint8_t chunk[8];
+        if (fread(chunk, 1, 8, fp) != 8) return false;
+        uint32_t size = le32(chunk + 4);
+        pos += 8;
+        uint64_t next = pos + size + (size & 1);
+        if (next > end) return false;
+        if (!memcmp(chunk, "fmt ", 4)) {
+            uint8_t fmt[16];
+            if (have_format || size < 16 || fread(fmt, 1, 16, fp) != 16) return false;
+            unsigned channels = le16(fmt + 2), rate = le32(fmt + 4);
+            unsigned align = le16(fmt + 12), bits = le16(fmt + 14);
+            if (le16(fmt) != 1 || (channels != 1 && channels != 2) || bits != 16 ||
+                rate < 8000 || rate > 48000 || align != channels * 2 || le32(fmt + 8) != rate * align)
+                return false;
+            instance->header.AudioFormat = 1;
+            instance->header.NumChannels = channels;
+            instance->header.SampleRate = rate;
+            instance->header.BitsPerSample = bits;
+            instance->header.BlockAlign = align;
+            have_format = true;
+        } else if (!memcmp(chunk, "data", 4)) {
+            if (!have_format || size % instance->header.BlockAlign) return false;
+            instance->data_remaining = size;
+            return true; // fp points at the first PCM frame.
         }
-
-        if(memcmp(subchunk.SubchunkID, "data", 4) == 0)
-        {
-            break;
-        } else {
-            // advance beyond this subchunk, it could be a 'LIST' chunk with file info or some other unhandled subchunk
-            fseek(fp, subchunk.SubchunkSize, SEEK_CUR);
-        }
+        if (fseek(fp, (long)next, SEEK_SET)) return false;
+        pos = next;
     }
-
-    LOGI_2("sample_rate=%d, channels=%d, bps=%d",
-            wav_head->SampleRate,
-            wav_head->NumChannels,
-            wav_head->BitsPerSample);
-
-    return true;
+    return false;
 }
 
-/**
- * @return true if data remains, false on error or end of file
- */
-DECODE_STATUS decode_wav(FILE *fp, decode_data *pData, wav_instance *pInstance) {
-    // read an even multiple of frames that can fit into output_samples buffer, otherwise
-    // we would have to manage what happens with partial frames in the output buffer
-    size_t bytes_per_frame = (pInstance->header.BitsPerSample / BITS_PER_BYTE) * pInstance->header.NumChannels;
-    size_t frames_to_read = pData->samples_capacity / bytes_per_frame;
-    size_t bytes_to_read = frames_to_read * bytes_per_frame;
-
-    size_t bytes_read = fread(pData->samples, 1, bytes_to_read, fp);
-
-    pData->fmt.channels = pInstance->header.NumChannels;
-    pData->fmt.bits_per_sample = pInstance->header.BitsPerSample;
-    pData->fmt.sample_rate = pInstance->header.SampleRate;
-
-    if(bytes_read != 0)
-    {
-        pData->frame_count = (bytes_read / (pInstance->header.BitsPerSample / BITS_PER_BYTE)) / pInstance->header.NumChannels;
-    } else {
-        pData->frame_count = 0;
-    }
-
-    LOGI_2("bytes_per_frame %d, bytes_to_read %d, bytes_read %d, frame_count %d",
-            bytes_per_frame, bytes_to_read, bytes_read,
-            pData->frame_count);
-
-    return (bytes_read == 0) ? DECODE_STATUS_DONE : DECODE_STATUS_CONTINUE;
+DECODE_STATUS decode_wav(FILE *fp, decode_data *data, wav_instance *instance) {
+    if (!fp || !data || !instance) return DECODE_STATUS_ERROR;
+    data->frame_count = 0;
+    size_t align = instance->header.BlockAlign;
+    if ((align != 2 && align != 4) || !data->samples || data->samples_capacity < align)
+        return DECODE_STATUS_ERROR;
+    if (!instance->data_remaining) return DECODE_STATUS_DONE;
+    size_t count = data->samples_capacity / align * align;
+    if (count > instance->data_remaining) count = instance->data_remaining;
+    size_t got = fread(data->samples, 1, count, fp);
+    if (got != count) return DECODE_STATUS_ERROR;
+    instance->data_remaining -= got;
+    data->fmt = {instance->header.SampleRate, (uint32_t)instance->header.BitsPerSample,
+                 (uint32_t)instance->header.NumChannels};
+    data->frame_count = got / align;
+    return DECODE_STATUS_CONTINUE;
 }

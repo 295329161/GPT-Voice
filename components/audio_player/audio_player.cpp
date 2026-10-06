@@ -435,6 +435,9 @@ static void audio_task(void *pvParam)
                     }
 
                     break;
+                } else if(AUDIO_PLAYER_REQUEST_STOP == audio_event.type) {
+                    // aplay_file has closed the file even when STOP interrupted PAUSE.
+                    set_state(i, AUDIO_PLAYER_STATE_IDLE);
                 } else if(AUDIO_PLAYER_REQUEST_SHUTDOWN_THREAD == audio_event.type) {
                     set_state(i, AUDIO_PLAYER_STATE_SHUTDOWN);
                     i->running = false;
@@ -567,7 +570,7 @@ esp_err_t audio_player_new(audio_player_config_t config)
                                 4 * 1024,
                                 &instance,
         (UBaseType_t)           instance.config.priority,
-        (TaskHandle_t * const)  NULL,
+        NULL,
         (BaseType_t)            instance.config.coreID);
 
     ESP_GOTO_ON_FALSE(pdPASS == task_val, ESP_ERR_NO_MEM, cleanup,

@@ -25,27 +25,56 @@ static void listing(const char *path) {
     file_entry_t *list = calloc(FILE_LIMIT, sizeof(*list));
     if (!list) {
         closedir(d);
+        terminal_notice("内存不足，无法读取目录");
         return;
     }
     int n = 0;
     struct dirent *e;
     bool truncated = false;
-    while ((e = readdir(d))) {
+    bool failed = false;
+    for (;;) {
+        // readdir returns NULL both at EOF and on I/O errors. Do not publish
+        // a partial/empty directory after an SD transfer failure.
+        errno = 0;
+        e = readdir(d);
+        if (!e) {
+            failed = errno != 0;
+            break;
+        }
         if (!strcmp(e->d_name, ".") || !strcmp(e->d_name, ".."))
             continue;
+        if (!storage_name_valid(e->d_name)) {
+            failed = true;
+            break;
+        }
+        for (int i = 0; i < n; i++)
+            if (!strcasecmp(list[i].name, e->d_name))
+                failed = true;
+        if (failed)
+            break;
         if (n == FILE_LIMIT) {
             truncated = true;
             break;
         }
         char p[PATH_SIZE];
         struct stat st;
-        if (snprintf(p, sizeof(p), "%s/%s", path, e->d_name) >= sizeof(p) || stat(p, &st))
+        int length = snprintf(p, sizeof(p), "%s/%s", path, e->d_name);
+        if (length < 0 || (size_t)length >= sizeof(p))
             continue;
+        if (stat(p, &st)) {
+            failed = true;
+            break;
+        }
         snprintf(list[n].name, sizeof(list[n].name), "%s", e->d_name);
         list[n].directory = S_ISDIR(st.st_mode);
         list[n++].size = st.st_size;
     }
     closedir(d);
+    if (failed) {
+        free(list);
+        terminal_notice("SD 读取失败，请卸载后重新挂载");
+        return;
+    }
     qsort(list, n, sizeof(*list), compare);
     uint64_t total_bytes = 0, free_bytes = 0;
     esp_vfs_fat_info("/sdcard", &total_bytes, &free_bytes);
@@ -58,7 +87,8 @@ static void listing(const char *path) {
     state->files_generation++;
     state_unlock();
     free(list);
-    terminal_notice(truncated ? "目录较大，仅显示前 96 项" : "已读取 %d 项", n);
+    if (truncated)
+        terminal_notice("目录较大，仅显示前 96 项");
 }
 void storage_job(const terminal_job_t *j) {
     if (j->kind == JOB_MOUNT) {
@@ -133,7 +163,9 @@ void storage_job(const terminal_job_t *j) {
                 strcat(dest, "/");
                 strcat(dest, j->b);
                 struct stat st;
-                if (stat(dest, &st) && errno == ENOENT)
+                if (stat(dest, &st) == 0)
+                    errno = EEXIST;
+                else if (errno == ENOENT)
                     ret = rename(j->a, dest);
             }
         }

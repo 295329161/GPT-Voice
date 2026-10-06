@@ -12,6 +12,7 @@ terminal_config_t config;
 terminal_state_t *state;
 SemaphoreHandle_t state_mutex;
 static QueueHandle_t jobs;
+static SemaphoreHandle_t config_mutex;
 void state_lock(void) {
     xSemaphoreTake(state_mutex, portMAX_DELAY);
 }
@@ -25,6 +26,7 @@ void terminal_notice(const char *fmt, ...) {
     va_start(ap, fmt);
     vsnprintf(state->notice, sizeof(state->notice), fmt, ap);
     va_end(ap);
+    state->notice_generation++;
     state_unlock();
 }
 void config_snapshot(terminal_config_t *out) {
@@ -32,7 +34,7 @@ void config_snapshot(terminal_config_t *out) {
     *out = config;
     state_unlock();
 }
-esp_err_t terminal_config_save(const terminal_config_t *v) {
+static esp_err_t config_save(const terminal_config_t *v) {
     if (v->version != 1 || v->brightness < 5 || v->brightness > 100 || v->volume < 0 ||
         v->volume > 90 || v->sensitivity < 1 || v->sensitivity > 5)
         return ESP_ERR_INVALID_ARG;
@@ -49,6 +51,43 @@ esp_err_t terminal_config_save(const terminal_config_t *v) {
         config = *v;
         state_unlock();
     }
+    return e;
+}
+// Serialize NVS writes, merging only the caller-owned fields into the latest
+// config. Network requests may finish after a newer volume/API change.
+esp_err_t terminal_config_update(const terminal_config_t *v, config_field_t field) {
+    xSemaphoreTake(config_mutex, portMAX_DELAY);
+    terminal_config_t merged;
+    config_snapshot(&merged);
+    switch (field) {
+    case CONFIG_BRIGHTNESS: merged.brightness = v->brightness; break;
+    case CONFIG_VOLUME: merged.volume = v->volume; break;
+    case CONFIG_SENSITIVITY: merged.sensitivity = v->sensitivity; break;
+    case CONFIG_WIFI:
+        memcpy(merged.ssid, v->ssid, sizeof(merged.ssid));
+        memcpy(merged.password, v->password, sizeof(merged.password));
+        break;
+    case CONFIG_LOCATION:
+        memcpy(merged.city, v->city, sizeof(merged.city));
+        merged.latitude = v->latitude; merged.longitude = v->longitude;
+        merged.location_set = v->location_set;
+        break;
+    case CONFIG_VOICE:
+        memcpy(merged.api_key, v->api_key, sizeof(merged.api_key));
+        memcpy(merged.endpoint, v->endpoint, sizeof(merged.endpoint));
+        memcpy(merged.model, v->model, sizeof(merged.model));
+        memcpy(merged.voice, v->voice, sizeof(merged.voice));
+        memcpy(merged.search_key, v->search_key, sizeof(merged.search_key));
+        break;
+    case CONFIG_SCORE:
+        if (v->best_dodge > merged.best_dodge) merged.best_dodge = v->best_dodge;
+        break;
+    default:
+        xSemaphoreGive(config_mutex);
+        return ESP_ERR_INVALID_ARG;
+    }
+    esp_err_t e = memcmp(&merged, &config, sizeof(merged)) ? config_save(&merged) : ESP_OK;
+    xSemaphoreGive(config_mutex);
     return e;
 }
 bool terminal_submit(job_kind_t kind, const char *a, const char *b, int value) {
@@ -98,12 +137,21 @@ static void worker(void *arg) {
         case JOB_VOICE_STOP:
             voice_stop();
             break;
+        case JOB_VOICE_TEST:
+            voice_test_prompt(j.a);
+            break;
+        case JOB_FIXTURES:
+            diagnostics_fixtures(j.value != 0);
+            break;
+        case JOB_AUDIO_PROBE:
+            media_audio_probe();
+            break;
         case JOB_SCORE: {
             terminal_config_t c;
             config_snapshot(&c);
             if (j.value > c.best_dodge) {
                 c.best_dodge = j.value;
-                terminal_config_save(&c);
+                terminal_config_update(&c, CONFIG_SCORE);
             }
             break;
         }
@@ -116,8 +164,8 @@ static void worker(void *arg) {
                 c.volume = atoi(j.a);
             else
                 c.sensitivity = atoi(j.a);
-            if (terminal_config_save(&c) == ESP_OK) {
-                bsp_display_brightness_set(c.brightness);
+            if (terminal_config_update(&c, j.value == 0 ? CONFIG_BRIGHTNESS : j.value == 1 ? CONFIG_VOLUME : CONFIG_SENSITIVITY) == ESP_OK) {
+                backlight_refresh();
                 if (state->audio_ready)
                     bsp_codec_volume_set(c.volume, NULL);
             }
@@ -133,8 +181,9 @@ void terminal_init(void) {
     state = heap_caps_calloc(1, sizeof(*state), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     assert(state);
     state_mutex = xSemaphoreCreateMutex();
+    config_mutex = xSemaphoreCreateMutex();
     jobs = xQueueCreateWithCaps(8, sizeof(terminal_job_t), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
-    assert(state_mutex && jobs);
+    assert(state_mutex && config_mutex && jobs);
     ESP_ERROR_CHECK(nvs_flash_init());
     config = (terminal_config_t){.version = 1, .brightness = 80, .volume = 70, .sensitivity = 3};
     strcpy(config.model, "stepaudio-3-realtime-preview");

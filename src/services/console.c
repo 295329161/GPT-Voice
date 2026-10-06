@@ -1,10 +1,33 @@
 #include "apps/shell.h"
 #include "core/terminal.h"
 #include "driver/uart.h"
+#include "driver/gpio.h"
+#include "driver/ledc.h"
 #include "esp32_s3_szp.h"
 #include "esp_heap_caps.h"
 #include <stdio.h>
 #include <stdlib.h>
+static lv_indev_t *test_pointer;
+static lv_indev_drv_t pointer_driver;
+static lv_indev_data_t pointer_data;
+static void pointer_read(lv_indev_drv_t *driver, lv_indev_data_t *data) {
+    (void)driver;
+    data->point = pointer_data.point;
+    data->state = pointer_data.state;
+}
+static void pointer_set(int x, int y, bool down) {
+    lvgl_port_lock(0);
+    if (!test_pointer) {
+        lv_indev_drv_init(&pointer_driver);
+        pointer_driver.type = LV_INDEV_TYPE_POINTER;
+        pointer_driver.read_cb = pointer_read;
+        test_pointer = lv_indev_drv_register(&pointer_driver);
+    }
+    pointer_data.point.x = x;
+    pointer_data.point.y = y;
+    pointer_data.state = down ? LV_INDEV_STATE_PR : LV_INDEV_STATE_REL;
+    lvgl_port_unlock();
+}
 static void task(void *arg) {
     uart_config_t cfg = {.baud_rate = 115200,
                          .data_bits = UART_DATA_8_BITS,
@@ -37,8 +60,50 @@ static void task(void *arg) {
                    state->audio_ready, state->voice_active, (unsigned)esp_get_free_heap_size(),
                    (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL),
                    (unsigned)uxTaskGetNumberOfTasks());
+            printf("MUSIC playing=%d paused=%d elapsed_ms=%lld status=%s\n",
+                   state->music_playing, state->music_paused,
+                   (long long)state->music_elapsed_ms, state->music_status);
+            printf("BACKLIGHT on=%d brightness=%d duty=%u boot_level=%d\n", state->backlight_on,
+                   config.brightness, (unsigned)ledc_get_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0),
+                   gpio_get_level(GPIO_NUM_0));
             state_unlock();
             voice_diagnostics();
+
+        } else if (!strncmp(line, "fixtures ", 9)) {
+            terminal_submit(JOB_FIXTURES, NULL, NULL, atoi(line + 9));
+        } else if (!strcmp(line, "ui")) {
+            lvgl_port_lock(0);
+            shell_diagnostics();
+            lvgl_port_unlock();
+        } else if (!strncmp(line, "text ", 5)) {
+            lvgl_port_lock(0);
+            shell_input_text(line + 5);
+            lvgl_port_unlock();
+        } else if (!strncmp(line, "tap ", 4)) {
+            int x, y, duration = 100;
+            if (sscanf(line + 4, "%d %d %d", &x, &y, &duration) >= 2 &&
+                x >= 0 && x < 320 && y >= 0 && y < 240 && duration >= 60 && duration <= 2000) {
+                pointer_set(x, y, true);
+                vTaskDelay(pdMS_TO_TICKS(duration));
+                pointer_set(x, y, false);
+            }
+        } else if (!strncmp(line, "swipe ", 6)) {
+            int x, y, xx, yy;
+            if (sscanf(line + 6, "%d %d %d %d", &x, &y, &xx, &yy) == 4 &&
+                x >= 0 && x < 320 && xx >= 0 && xx < 320 &&
+                y >= 0 && y < 240 && yy >= 0 && yy < 240) {
+                for (int i=0; i<=20; i++) {
+                    pointer_set(x+(xx-x)*i/20, y+(yy-y)*i/20, true);
+                    vTaskDelay(pdMS_TO_TICKS(20));
+                }
+                pointer_set(xx, yy, false);
+            }
+        } else if (!strncmp(line, "voice-test ", 11)) {
+            terminal_submit(JOB_VOICE_TEST, line + 11, NULL, 0);
+        } else if (!strncmp(line, "voice-sources ", 14)) {
+            lvgl_port_lock(0);
+            shell_voice_sources(atoi(line + 14) != 0);
+            lvgl_port_unlock();
         } else if (!strncmp(line, "wifi ", 5)) {
             char *separator = strchr(line + 5, '\t');
             if (separator) {
@@ -61,11 +126,19 @@ static void task(void *arg) {
             state_unlock();
         } else if (!strncmp(line, "music ", 6)) {
             terminal_submit(JOB_MUSIC_PLAY, line + 6, NULL, 0);
+        } else if (!strcmp(line, "music-toggle")) {
+            terminal_submit(JOB_MUSIC_TOGGLE, NULL, NULL, 0);
+        } else if (!strcmp(line, "backlight-toggle")) {
+            backlight_toggle();
+        } else if (!strcmp(line, "audio-probe")) {
+            terminal_submit(JOB_AUDIO_PROBE, NULL, NULL, 0);
+        } else if (!strncmp(line, "music-next ", 11)) {
+            terminal_submit(JOB_MUSIC_NEXT, NULL, NULL, atoi(line + 11));
         } else if (!strcmp(line, "stop")) {
             terminal_submit(JOB_MUSIC_TOGGLE, NULL, NULL, -1);
         } else if (!strncmp(line, "page ", 5)) {
             int p = atoi(line + 5);
-            if (p >= 0 && p <= 18) {
+            if ((p >= 0 && p <= 18) || p == 21) {
                 lvgl_port_lock(0);
                 shell_open(p);
                 lvgl_port_unlock();

@@ -7,7 +7,10 @@
 #include <string.h>
 static esp_gatt_if_t client = ESP_GATT_IF_NONE;
 static uint16_t connection;
-static bool linked, ready;
+static bool linked, ready, connecting, switching;
+static uint8_t peer[6];
+static ble_entry_t next_peer;
+static void connect_peer(const ble_entry_t *d);
 static void status(const char *s) {
     state_lock();
     snprintf(state->ble_status, sizeof(state->ble_status), "%s", s);
@@ -50,8 +53,15 @@ static void gap(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *p) {
         }
         state_unlock();
     } else if (event == ESP_GAP_BLE_SEC_REQ_EVT) {
-        esp_ble_gap_security_rsp(p->ble_security.ble_req.bd_addr, linked);
+        state_lock();
+        bool selected = linked && !memcmp(peer, p->ble_security.ble_req.bd_addr, 6);
+        state_unlock();
+        esp_ble_gap_security_rsp(p->ble_security.ble_req.bd_addr, selected);
     } else if (event == ESP_GAP_BLE_AUTH_CMPL_EVT) {
+        state_lock();
+        bool selected = linked && !memcmp(peer, p->ble_security.auth_cmpl.bd_addr, 6);
+        state_unlock();
+        if (!selected) return;
         char s[120];
         snprintf(s, sizeof(s),
                  p->ble_security.auth_cmpl.success ? "配对成功，已保存绑定"
@@ -71,20 +81,47 @@ static void gatt(esp_gattc_cb_event_t event, esp_gatt_if_t interface, esp_ble_ga
         client = interface;
         ready = p->reg.status == ESP_GATT_OK;
     } else if (event == ESP_GATTC_OPEN_EVT) {
+        state_lock();
+        bool selected = connecting && !memcmp(peer, p->open.remote_bda, 6);
+        if (selected) connecting = false;
+        state_unlock();
+        if (!selected) return;
         if (p->open.status != ESP_GATT_OK) {
             linked = false;
             status("连接失败：对方可能不接受连接");
             return;
         }
+        state_lock();
         connection = p->open.conn_id;
         linked = true;
+        state_unlock();
         status("已连接，正在协商配对");
         esp_err_t e = esp_ble_set_encryption(p->open.remote_bda, ESP_BLE_SEC_ENCRYPT);
         if (e != ESP_OK)
             status("无法发起配对");
     } else if (event == ESP_GATTC_DISCONNECT_EVT) {
-        linked = false;
-        status("BLE 连接已断开（绑定记录保留）");
+        state_lock();
+        bool selected = linked && connection == p->disconnect.conn_id &&
+                        !memcmp(peer, p->disconnect.remote_bda, 6);
+        bool reconnect = selected && switching;
+        ble_entry_t target = next_peer;
+        if (selected) { linked = false; switching = false; }
+        state_unlock();
+        if (reconnect) connect_peer(&target);
+        else if (selected) status("BLE 连接已断开（绑定记录保留）");
+    }
+}
+static void connect_peer(const ble_entry_t *d) {
+    state_lock();
+    memcpy(peer, d->address, 6);
+    connecting = true;
+    state_unlock();
+    status("正在连接并配对...");
+    if (esp_ble_gattc_open(client, (uint8_t *)d->address, d->address_type, true) != ESP_OK) {
+        state_lock();
+        connecting = false;
+        state_unlock();
+        status("发起连接失败");
     }
 }
 void ble_init(void) {
@@ -122,7 +159,7 @@ void ble_job(const terminal_job_t *j) {
                                           .scan_interval = 0x50,
                                           .scan_window = 0x30,
                                           .scan_duplicate = BLE_SCAN_DUPLICATE_ENABLE};
-        status("正在扫描…");
+        status("正在扫描...");
         esp_ble_gap_set_scan_params(&p);
     } else {
         ble_entry_t d;
@@ -134,12 +171,22 @@ void ble_job(const terminal_job_t *j) {
         if (!valid)
             return;
         esp_ble_gap_stop_scanning();
-        if (linked) {
-            esp_ble_gattc_close(client, connection);
-            linked = false;
-        }
-        status("正在连接并配对…");
-        if (esp_ble_gattc_open(client, d.address, d.address_type, true) != ESP_OK)
-            status("发起连接失败");
+        state_lock();
+        bool busy = connecting || switching;
+        bool close = linked;
+        uint16_t old_connection = connection;
+        if (!busy && close) { next_peer = d; switching = true; }
+        state_unlock();
+        if (busy) {
+            status("连接操作进行中，请稍后重试");
+        } else if (close) {
+            status("正在断开上一个设备...");
+            if (esp_ble_gattc_close(client, old_connection) != ESP_OK) {
+                state_lock();
+                switching = false;
+                state_unlock();
+                status("断开失败，请稍后重试");
+            }
+        } else connect_peer(&d);
     }
 }

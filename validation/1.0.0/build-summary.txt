@@ -1,0 +1,11 @@
+GPT Voice 1.0.0
+ESP-IDF 5.5.0 / espressif32 6.12.0
+Final firmware build and USB flash: SUCCESS
+Build inputs: 73 files byte-identical to source. See build-inputs.json.
+Application binary: 3846016 bytes; valid ESP32-S3 checksum and image hash.
+Flash: DIO, 80 MHz, 16 MB. App partition: 0x10000, 10 MiB.
+Written: bootloader @0x0, partitions @0x8000, app @0x10000.
+NVS @0x9000-0xefff and PHY @0xf000-0xffff untouched.
+Full build: third-party esp_lvgl_port old touch API deprecation warning.
+Final incremental build: no project compiler warnings.
+Complete logs are archived privately outside the source/release tree.

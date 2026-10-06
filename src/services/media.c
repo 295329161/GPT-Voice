@@ -2,17 +2,22 @@
 #include "core/terminal.h"
 #include "esp32_s3_szp.h"
 #include "esp_heap_caps.h"
+#include "esp_timer.h"
+#include "driver/i2c.h"
 #include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdatomic.h>
 #include <sys/stat.h>
 extern esp_err_t demo_audio_output(void *, size_t, size_t *);
+extern esp_err_t demo_audio_raw_capture(void *, size_t, size_t *);
 static uint32_t music_rate = 16000;
 static int channels = 2;
 static bool initialized;
 static SemaphoreHandle_t started;
 static char (*playlist)[PATH_SIZE];
 static int total, index_now;
+static atomic_bool new_track;
 static esp_err_t mute(AUDIO_PLAYER_MUTE_SETTING s) {
     if (!state->voice_active)
         pa_en(s == AUDIO_PLAYER_UNMUTE);
@@ -52,16 +57,29 @@ static esp_err_t write_pcm(void *buf, size_t len, size_t *done, uint32_t timeout
 }
 static void player_event(audio_player_cb_ctx_t *ctx) {
     if (ctx->audio_event == AUDIO_PLAYER_CALLBACK_EVENT_PLAYING ||
+        ctx->audio_event == AUDIO_PLAYER_CALLBACK_EVENT_COMPLETED_PLAYING_NEXT ||
         ctx->audio_event == AUDIO_PLAYER_CALLBACK_EVENT_UNKNOWN_FILE_TYPE)
         xSemaphoreGive(started);
     state_lock();
+    int64_t now = esp_timer_get_time() / 1000;
+    if (state->music_playing)
+        state->music_elapsed_ms += now - state->music_started_ms;
+    bool was_paused = state->music_paused;
+    state->music_playing = false;
+    state->music_paused = false;
     const char *s = "已停止";
     switch (ctx->audio_event) {
     case AUDIO_PLAYER_CALLBACK_EVENT_PLAYING:
+    case AUDIO_PLAYER_CALLBACK_EVENT_COMPLETED_PLAYING_NEXT:
         s = "正在播放";
+        if (atomic_exchange(&new_track, false) || !was_paused)
+            state->music_elapsed_ms = 0;
+        state->music_playing = true;
+        state->music_started_ms = now;
         break;
     case AUDIO_PLAYER_CALLBACK_EVENT_PAUSE:
         s = "已暂停";
+        state->music_paused = true;
         break;
     case AUDIO_PLAYER_CALLBACK_EVENT_UNKNOWN_FILE_TYPE:
         s = "不支持或损坏的音频";
@@ -70,7 +88,13 @@ static void player_event(audio_player_cb_ctx_t *ctx) {
         break;
     }
     snprintf(state->music_status, sizeof(state->music_status), "%s", s);
+    bool playing = state->music_playing;
     state_unlock();
+    if (ctx->audio_event == AUDIO_PLAYER_CALLBACK_EVENT_UNKNOWN_FILE_TYPE)
+        terminal_notice("不支持或损坏的音频文件");
+    // Resume does not run audio_player's file-start unmute callback. Voice has
+    // switched PA_EN off, so restore the amplifier on the actual PLAYING event.
+    mute(playing ? AUDIO_PLAYER_UNMUTE : AUDIO_PLAYER_MUTE);
 }
 static bool supported(const char *p) {
     const char *x = strrchr(p, '.');
@@ -110,7 +134,9 @@ static void play(const char *path) {
         return;
     }
     xSemaphoreTake(started, 0);
+    atomic_store(&new_track, true);
     if (audio_player_play(f) != ESP_OK) {
+        atomic_store(&new_track, false);
         fclose(f);
         terminal_notice("播放失败");
         return;
@@ -155,8 +181,50 @@ esp_err_t media_suspend(void) {
     }
     return ESP_OK;
 }
-void media_resume_clock(void) {
-    bsp_codec_set_fs(music_rate, 32, I2S_SLOT_MODE_STEREO);
+esp_err_t media_resume_clock(void) {
+    return bsp_codec_set_fs(music_rate, 32, I2S_SLOT_MODE_STEREO);
+}
+void media_audio_probe(void) {
+    if (!initialized || state->voice_active) {
+        printf("AUDIO_PROBE unavailable: audio busy or offline\n");
+        return;
+    }
+    uint8_t reg = PCA9557_OUTPUT_PORT, output = 0, pin = 0;
+    esp_err_t e = i2c_master_write_read_device(BSP_I2C_NUM, PCA9557_SENSOR_ADDR,
+                                               &reg, 1, &output, 1, pdMS_TO_TICKS(100));
+    reg = PCA9557_INPUT_PORT;
+    e |= i2c_master_write_read_device(BSP_I2C_NUM, PCA9557_SENSOR_ADDR,
+                                     &reg, 1, &pin, 1, pdMS_TO_TICKS(100));
+    if (e != ESP_OK) {
+        printf("AUDIO_PROBE expander read failed\n");
+        return;
+    }
+    // Run only in the service worker, outside Voice. Discard stale DMA input,
+    // then measure levels without storing or printing microphone recordings.
+    int16_t raw[1024];
+    uint64_t levels[3] = {0};
+    unsigned count = 0, peak[3] = {0};
+    const unsigned slots[] = {0, 1, 3};
+    for (unsigned block = 0; block < 40; block++) {
+        size_t got = 0;
+        e = demo_audio_raw_capture(raw, sizeof(raw), &got);
+        if (e != ESP_OK || got != sizeof(raw)) {
+            printf("AUDIO_PROBE capture failed\n");
+            return;
+        }
+        if (block < 8) continue;
+        for (unsigned i = 0; i < 256; i++)
+            for (unsigned ch = 0; ch < 3; ch++) {
+                unsigned amplitude = abs(raw[i * 4 + slots[ch]]);
+                levels[ch] += amplitude;
+                if (amplitude > peak[ch]) peak[ch] = amplitude;
+            }
+        count += 256;
+    }
+    printf("AUDIO_PROBE amp=%d pin=%d playing=%d volume=%d mean_abs=%u/%u/%u peak=%u/%u/%u\n",
+           !!(output & PA_EN_GPIO), !!(pin & PA_EN_GPIO), state->music_playing, config.volume,
+           (unsigned)(levels[0] / count), (unsigned)(levels[1] / count), (unsigned)(levels[2] / count),
+           peak[0], peak[1], peak[2]);
 }
 void media_job(const terminal_job_t *j) {
     if (!initialized) {
@@ -205,8 +273,8 @@ void media_job(const terminal_job_t *j) {
             return;
         }
         if (s == AUDIO_PLAYER_STATE_PAUSE) {
-            media_resume_clock();
-            audio_player_resume();
+            if (media_resume_clock() != ESP_OK || audio_player_resume() != ESP_OK)
+                terminal_notice("恢复播放失败，请重试");
             return;
         }
     }

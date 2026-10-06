@@ -1,0 +1,236 @@
+{
+  "project": "GPT Voice",
+  "version": "1.0.0",
+  "date": "2026-10-07",
+  "timezone": "Asia/Shanghai",
+  "release_type": "local",
+  "source_reference": "v1.0.0；提交哈希见发布包manifest.json，避免版本内自引用",
+  "board": "立创实战派ESP32-S3 V1.0.1 N16R8 320x240",
+  "review": "直接源码审查，非Bugbot结果",
+  "host_tests": {
+    "sanitizers": [
+      "ASan",
+      "UBSan"
+    ],
+    "c_cpp": [
+      {
+        "test": "image_info",
+        "status": "pass"
+      },
+      {
+        "test": "button",
+        "status": "pass"
+      },
+      {
+        "test": "search_intent",
+        "status": "pass"
+      },
+      {
+        "test": "search_evidence",
+        "status": "pass"
+      },
+      {
+        "test": "ws_text",
+        "status": "pass"
+      },
+      {
+        "test": "conversation",
+        "status": "pass"
+      },
+      {
+        "test": "resampler",
+        "status": "pass"
+      },
+      {
+        "test": "path",
+        "status": "pass"
+      },
+      {
+        "test": "storage",
+        "status": "pass"
+      },
+      {
+        "test": "arcade",
+        "status": "pass"
+      },
+      {
+        "test": "tilt",
+        "status": "pass"
+      },
+      {
+        "test": "mp3_recovery",
+        "status": "pass"
+      },
+      {
+        "test": "wav",
+        "status": "pass"
+      }
+    ],
+    "python": [
+      {
+        "test": "test_stage.py",
+        "status": "pass"
+      }
+    ],
+    "log": "host-tests.log"
+  },
+  "build": {
+    "status": "pass",
+    "esp_idf": "5.5.0",
+    "platformio_platform": "espressif32@6.12.0",
+    "matched_build_inputs": 73,
+    "third_party_warning": "固定版本esp_lvgl_port旧触摸接口弃用警告；最后增量构建无项目警告"
+  },
+  "firmware": [
+    {
+      "file": "bootloader.bin",
+      "bytes": 21088,
+      "sha256": "a065ef6371eb3093490a53632f158afde9f11fcbb65b7fe62e0460fd5853be83"
+    },
+    {
+      "file": "partitions.bin",
+      "bytes": 3072,
+      "sha256": "ef38c1c8bdb24a2006840e0b411327c92ac382d3138835ada6b6a8448d0db3a7"
+    },
+    {
+      "file": "firmware.bin",
+      "bytes": 3846016,
+      "sha256": "9477fb7b457d2e6965a14315aa0de546aa0792e3e4e44007446bfb74cfced878"
+    },
+    {
+      "file": "firmware.elf",
+      "bytes": 21741668,
+      "sha256": "f12ba381d25838406c1d0448385f988765a43ff466a7e5bde69e7bd85a72cd9a"
+    }
+  ],
+  "hardware": [
+    {
+      "test": "boot",
+      "status": "pass",
+      "detail": "Wi-Fi、SNTP、SD、IMU、音频启动正常，设备显示 1.0.0"
+    },
+    {
+      "test": "wifi",
+      "status": "pass",
+      "detail": "扫描、当前网络留空密码重连和重启自动连接成功，未读取密码"
+    },
+    {
+      "test": "settings",
+      "status": "pass",
+      "detail": "亮度77、音量65保留，字段合并保存与硬件复位检查完成"
+    },
+    {
+      "test": "backlight",
+      "status": "pass",
+      "detail": "GPIO0真实电平切换，长按不重复，熄屏修改设置不亮屏，复位默认亮屏"
+    },
+    {
+      "test": "sd-stress",
+      "status": "pass",
+      "detail": "100轮目录条目/大小/顺序一致，其中50轮同时播放MP3，未再观察到SD读错误"
+    },
+    {
+      "test": "files",
+      "status": "pass",
+      "detail": "创建、长按、重命名、同名保护、取消删除、确认删除及测试目录清理"
+    },
+    {
+      "test": "images",
+      "status": "pass",
+      "detail": "PNG、大写PNG、大写JPEG显示；损坏和超限图片拒绝"
+    },
+    {
+      "test": "music",
+      "status": "pass",
+      "detail": "MP3/PCM16 WAV、暂停/停止、SD卸载/挂载；损坏音频明确提示"
+    },
+    {
+      "test": "music-after-voice",
+      "status": "pass",
+      "detail": "最终固件恢复后PA=1，DAC/麦克风mean_abs=13811/623/245"
+    },
+    {
+      "test": "voice-tools",
+      "status": "pass",
+      "detail": "真实会话文字诊断触发时钟、新闻和天气工具，收到语音回复"
+    },
+    {
+      "test": "voice-news",
+      "status": "pass",
+      "detail": "实际StepSearch检索，概览与按条目追问简短，无网址朗读；无当日资料明确说明"
+    },
+    {
+      "test": "voice-acoustic",
+      "status": "not_verified",
+      "detail": "电脑合成声音输入未观察到可确认VAD/ASR，真人识别与声学打断未完成"
+    },
+    {
+      "test": "weather",
+      "status": "pass",
+      "detail": "Open-Meteo真实城市查询；八种昼夜/天气预览；预览不改真实设置"
+    },
+    {
+      "test": "games",
+      "status": "pass",
+      "detail": "射击运行/暂停，三消选牌/撤回/洗牌/重开，Flood选色/暂停/重开；规则主机测试"
+    },
+    {
+      "test": "ble",
+      "status": "partial",
+      "detail": "附近设备扫描成功；无归属明确的外设，端到端配对未执行"
+    },
+    {
+      "test": "web",
+      "status": "pass",
+      "detail": "8项HTTP与页面渲染检查通过，结束后网页关闭"
+    },
+    {
+      "test": "physical-touch",
+      "status": "not_verified",
+      "detail": "LVGL真实回调由串口指针注入；未等同于每个物理触摸位置"
+    },
+    {
+      "test": "network-faults",
+      "status": "not_verified",
+      "detail": "已有有界恢复源码与算法检查，但未完成全套网络故障注入"
+    },
+    {
+      "test": "home-assistant",
+      "status": "not_implemented",
+      "detail": "当前为明确标注开发中的占位入口"
+    }
+  ],
+  "web_checks": "web-checks.json",
+  "screenshots": "screenshots.json",
+  "sd_incident": {
+    "observed": "一次CRC读取错误和后续异常目录缓存",
+    "recovered": "安全卸载/挂载后恢复原有列表",
+    "changes": "读取失败不发布不完整/异常列表；SDMMC时钟限10MHz",
+    "retest": "100轮目录读取通过，包括50轮同时播放MP3",
+    "limit": "单次现象无法确定物理根因，有限复测不能保证所有卡和接触条件"
+  },
+  "final_device_state": {
+    "page": "HOME",
+    "backlight": true,
+    "brightness": 77,
+    "volume": 65,
+    "music": "stopped",
+    "voice": "closed",
+    "web": "closed",
+    "test_directory": "removed",
+    "original_sd_root_entries": 5,
+    "nvs": "preserved"
+  },
+  "scope_limits": [
+    "真人语音识别和声学打断未完成",
+    "BLE端到端配对未完成",
+    "完整网络故障注入未完成",
+    "Home Assistant未实现",
+    "回复60汉字限制来自模型指令，并非强制截断",
+    "外部服务及网络可导致查询失败"
+  ],
+  "release_input_scan": {
+    "known_token_or_private_key_payload_matches": 0,
+    "note": "固件含3个以NUL结束的PEM解析器标题常量，没有对应私钥内容；未误认为实际凭据。发布输入不含NVS/全片Flash备份。"
+  }
+}

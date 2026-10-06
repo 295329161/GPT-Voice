@@ -1,0 +1,344 @@
+[
+  {
+    "file": "screenshots/00-home.png",
+    "page_id": 0,
+    "label": "首页",
+    "sha256": "a8eb6793d784e809a09f9956b2214fff67b24ac1ffe8aeb09353903994f4174a"
+  },
+  {
+    "file": "screenshots/01-menu-1.png",
+    "page_id": 1,
+    "label": "第一页",
+    "sha256": "f3dab5396ad9b146df6a9f599a2f4e1b5e23890534a9c6ddb72d8b1f524acde5"
+  },
+  {
+    "file": "screenshots/01-menu-2.png",
+    "page_id": 1,
+    "label": "第二页",
+    "sha256": "9c30fc805715add4116f8cdf1e53f70d9cd0cebe5ec795a4e3d0773a7ce84c42"
+  },
+  {
+    "file": "screenshots/02-settings-bottom.png",
+    "page_id": 2,
+    "label": "设置下半页",
+    "sha256": "de000d261c3caeebe8bb34c48f840dbad4674e31815508221de15b384317d6ef"
+  },
+  {
+    "file": "screenshots/02-settings.png",
+    "page_id": 2,
+    "label": "常规设置",
+    "sha256": "5be57faf105f48287765332a3e4ebe7fd8c3a5719e0aa4f4766ce3af5c76eae4"
+  },
+  {
+    "file": "screenshots/03-music-idle.png",
+    "page_id": 3,
+    "label": "空闲",
+    "sha256": "484e63f21fbef46ea476a8de2d74e48cf32a89a9abf5448c8ed321e72528f28a"
+  },
+  {
+    "file": "screenshots/03-music-invalid.png",
+    "page_id": 3,
+    "label": "损坏音频提示",
+    "sha256": "bd5449715d87f3e84f7552b16a0339fb4da729c96086190dc493e4242ccac156"
+  },
+  {
+    "file": "screenshots/03-music-paused.png",
+    "page_id": 3,
+    "label": "暂停",
+    "sha256": "3ea4d8bbbbf6c34d9a270a154ca5d3f6838f39c393be8e127e70a50d88830667"
+  },
+  {
+    "file": "screenshots/03-music-playing.png",
+    "page_id": 3,
+    "label": "播放",
+    "sha256": "9ec7ed5d2e0614f2772922d9366d28cc5d1104d45fed8c6d005ed19b1ba827eb"
+  },
+  {
+    "file": "screenshots/03-music-resumed.png",
+    "page_id": 3,
+    "label": "退出语音后恢复",
+    "sha256": "996e945a0567c8ba5911284b74ca452bd1bd1b5d28f5998102d9bd36c373d4ee"
+  },
+  {
+    "file": "screenshots/04-games.png",
+    "page_id": 4,
+    "label": "游戏入口",
+    "sha256": "632dd655028e08e74602a232cb2cc2a966e5e3717b45d101795cd9753481dd11"
+  },
+  {
+    "file": "screenshots/05-pictures.png",
+    "page_id": 5,
+    "label": "文件浏览",
+    "sha256": "3e512c4a4bd8228fd3929e684813fd9c0ca74f6eca3b97c5b8ded9a08da84c0d"
+  },
+  {
+    "file": "screenshots/06-voice-news.png",
+    "page_id": 6,
+    "label": "实际新闻摘要",
+    "sha256": "5c3869e90a49340d6ba2be4eacd6ab519b5dad5d13c0a28dc3c0220ec4bfe34b"
+  },
+  {
+    "file": "screenshots/06-voice-sources.png",
+    "page_id": 6,
+    "label": "来源独立显示",
+    "sha256": "fad2c7ac1e67ba1456c4ccd996b8a990b56e0f996bf8c2ac09a22aa832307495"
+  },
+  {
+    "file": "screenshots/06-voice-today.png",
+    "page_id": 6,
+    "label": "最终固件今日新闻查询",
+    "sha256": "c2fe0711af7871ccdf900027c61f00e1c5b1277cff0b8c486f5b5bacd9ae2e06"
+  },
+  {
+    "file": "screenshots/06-voice-weather.png",
+    "page_id": 6,
+    "label": "实际天气问答",
+    "sha256": "f968eaacbdb2c868721419ae061f2cb94d0216473e3d4cfe2b910d85aee59959"
+  },
+  {
+    "file": "screenshots/07-files-test-directory.png",
+    "page_id": 7,
+    "label": "独立测试目录",
+    "sha256": "346f2207f57c2118d7ceb9eca48e3b1ab9c57f151996a593489003af2de4003e"
+  },
+  {
+    "file": "screenshots/07-files.png",
+    "page_id": 7,
+    "label": "SD 根目录",
+    "sha256": "2f455a74696319faac0b5279afb317aa7db5b2230d0b209150d2966a0d3cf367"
+  },
+  {
+    "file": "screenshots/08-home-assistant.png",
+    "page_id": 8,
+    "label": "开发中占位",
+    "sha256": "4701649fdcee949843d8076d304e27c70ec7df9c40a1475eace05d1dfbb3826a"
+  },
+  {
+    "file": "screenshots/09-brightness.png",
+    "page_id": 9,
+    "label": "保存亮度",
+    "sha256": "7b2dc6f8b29ecb2a410650c68cc7584195e82b16b0d305af188b0788e5fc9ca0"
+  },
+  {
+    "file": "screenshots/10-volume.png",
+    "page_id": 10,
+    "label": "保存音量",
+    "sha256": "695a328f84085db5724a764446c0a050ce039909b4b731a83198dba44877599a"
+  },
+  {
+    "file": "screenshots/11-wifi-connected.png",
+    "page_id": 11,
+    "label": "连接成功",
+    "sha256": "e1a8a4fdc63f9c8d839cc8552f57570667f0ccd6201e928ab9e03b07d4284795"
+  },
+  {
+    "file": "screenshots/11-wifi-scan.png",
+    "page_id": 11,
+    "label": "扫描结果",
+    "sha256": "b56c2f27e310a9cf6a634737fe4e081d96cbdf929f22d1709d49db9e3e0ab0d9"
+  },
+  {
+    "file": "screenshots/11-wifi.png",
+    "page_id": 11,
+    "label": "Wi-Fi 设置",
+    "sha256": "3fa5ab32c811d352fc700cc22764f326a18ae0d7d26b4236f76308f10c9df339"
+  },
+  {
+    "file": "screenshots/12-bluetooth-scan.png",
+    "page_id": 12,
+    "label": "扫描结果（未进行配对）",
+    "sha256": "8a3d2a92a7ba84e4f1a2fb022f019ce78f25c27f9d77ec23758ec99bf65c3abb"
+  },
+  {
+    "file": "screenshots/12-bluetooth.png",
+    "page_id": 12,
+    "label": "BLE 设置",
+    "sha256": "a9081d090e71be3b4885b736346359c6e8c4621ed5d6c68d0ca0b4cf341004d3"
+  },
+  {
+    "file": "screenshots/13-weather-city.png",
+    "page_id": 13,
+    "label": "城市配置",
+    "sha256": "9a80aaa84ab229b77403c260f9d6718e002046cc70fde0f4969f244a8936d62b"
+  },
+  {
+    "file": "screenshots/14-web-browser.png",
+    "page_id": 14,
+    "label": "浏览器配置表单",
+    "sha256": "29f2da7dcab8a90c753a6461784cd0d6170d44986ce2e351aa6f0b9305b405dc"
+  },
+  {
+    "file": "screenshots/14-web-disabled.png",
+    "page_id": 14,
+    "label": "网页已关闭",
+    "sha256": "64b3125f7f40ae99f00313bba3e60e7f05fe3103f5da3d88c9d5bf1db16be277"
+  },
+  {
+    "file": "screenshots/14-web-enabled.png",
+    "page_id": 14,
+    "label": "网页开启（配对码已遮盖）",
+    "sha256": "eb6cb02f0c4b909e71a17ddd6b9313a422aae50e593df42134883489ecdd3897"
+  },
+  {
+    "file": "screenshots/15-about.png",
+    "page_id": 15,
+    "label": "版本与资源",
+    "sha256": "11be501b38ac7e03420e5081de52cd3a85b15d744e36fc05f786f0142421401e"
+  },
+  {
+    "file": "screenshots/16-shooter.png",
+    "page_id": 16,
+    "label": "运行与暂停",
+    "sha256": "6054e13d375de04054325249bd5d09dcd36f03d4f43614a9ff842237e41c51a4"
+  },
+  {
+    "file": "screenshots/17-tiles-picked.png",
+    "page_id": 17,
+    "label": "选牌",
+    "sha256": "0f54590c95f0622bf639482cb591fe50109b911c06708ec198aa57c9a386b35c"
+  },
+  {
+    "file": "screenshots/17-tiles-undo-shuffle.png",
+    "page_id": 17,
+    "label": "撤回与洗牌",
+    "sha256": "6495ec58b1e11516edfee7969f04358d90c6165223e108f95b910ec163448e61"
+  },
+  {
+    "file": "screenshots/17-tiles.png",
+    "page_id": 17,
+    "label": "初始棋盘",
+    "sha256": "18eb4c05fa1776ede691dec4b007a01582e2d172a842ddce9984a2cdfbbbb1a3"
+  },
+  {
+    "file": "screenshots/18-flood-paused.png",
+    "page_id": 18,
+    "label": "暂停",
+    "sha256": "fe658a76f2d7702311e956ae17195796e1d339c877e1c927fe926072278dff3a"
+  },
+  {
+    "file": "screenshots/18-flood.png",
+    "page_id": 18,
+    "label": "初始棋盘",
+    "sha256": "9c991a88d230dadc43485bba1b4ef569896b99f78f48489fc0d3cac9d804de4d"
+  },
+  {
+    "file": "screenshots/19-delete-confirm.png",
+    "page_id": 19,
+    "label": "删除确认",
+    "sha256": "066817b82ad870c4da0334aacda729267c461f01fa05998b37b5c45fa335178f"
+  },
+  {
+    "file": "screenshots/19-file-detail.png",
+    "page_id": 19,
+    "label": "文件详情",
+    "sha256": "dc12f16695e7770b037aa3a491d59bea8500b82ddbcfe5354ba0a349dc3f2bb8"
+  },
+  {
+    "file": "screenshots/19-mkdir-dialog.png",
+    "page_id": 19,
+    "label": "新建文件夹",
+    "sha256": "4364955dcca99b9053e1fd010e217c6bac4624dd57423409fbc6d5e3a3b9d47f"
+  },
+  {
+    "file": "screenshots/19-mkdir-keyboard.png",
+    "page_id": 19,
+    "label": "输入文件夹名称",
+    "sha256": "31d69ed53a55bc77dd0abfd27e071159575b774455a3a8236c3f65785793fa1c"
+  },
+  {
+    "file": "screenshots/19-rename-conflict.png",
+    "page_id": 19,
+    "label": "同名保护与失败提示",
+    "sha256": "14c17dfab998cbf25f9615c1a469770c39072e9dd3bc2eaa19c4e519a9df64d3"
+  },
+  {
+    "file": "screenshots/19-rename-dialog.png",
+    "page_id": 19,
+    "label": "重命名输入",
+    "sha256": "119b373dd5bf66217a8f7b9625120fdb9b7aa14e28ec69039b3ec79013816d0b"
+  },
+  {
+    "file": "screenshots/20-image-invalid.png",
+    "page_id": 20,
+    "label": "损坏图片提示",
+    "sha256": "cde62ec03d4102067cbcac743bb81de26ec4ccf2fd035a008e29fd75976a8122"
+  },
+  {
+    "file": "screenshots/20-image-jpeg.png",
+    "page_id": 20,
+    "label": "大写 .JPEG",
+    "sha256": "05844e0881e9bd07ba4a397a7f6ba13ef23bc121282d470691df3189076524c2"
+  },
+  {
+    "file": "screenshots/20-image-landscape.png",
+    "page_id": 20,
+    "label": "横向 PNG",
+    "sha256": "879ca8a5ee7e19cdbede42e6dd37e67b55c23a5b118dbe906c8f36c16a472b91"
+  },
+  {
+    "file": "screenshots/20-image-oversize.png",
+    "page_id": 20,
+    "label": "文件超限提示",
+    "sha256": "e7b2fc9647a8c20b2fdad604d9ccc663e94759622a09e96a43ec5b383021d216"
+  },
+  {
+    "file": "screenshots/20-image-portrait.png",
+    "page_id": 20,
+    "label": "竖向大写 .PNG",
+    "sha256": "8ae18bcf0faa0a60e24f981eeb1930d96bde99cee5b60b8d5367d2d4a91fbf45"
+  },
+  {
+    "file": "screenshots/21-weather-cloud-day.png",
+    "page_id": 21,
+    "label": "云 / 白天",
+    "sha256": "41fb269ea61f93d0ce275076b3f5e8e1173a06b79c0ff599285729d3a69564be"
+  },
+  {
+    "file": "screenshots/21-weather-cloud-night.png",
+    "page_id": 21,
+    "label": "云 / 夜晚",
+    "sha256": "1a38d5e9aa7dc0428fe3337204f8251837c0eb45529e353914efe709b381a647"
+  },
+  {
+    "file": "screenshots/21-weather-preview.png",
+    "page_id": 21,
+    "label": "预览入口",
+    "sha256": "8e51955354ad38a980fdee29c4ba05c6138891094a17648676d8dc5feb18e5d4"
+  },
+  {
+    "file": "screenshots/21-weather-rain-day.png",
+    "page_id": 21,
+    "label": "雨 / 白天",
+    "sha256": "bdd33dca5548e7c7e0b38f551edea01d34cd8ab042c5a50079514f4920cc5c06"
+  },
+  {
+    "file": "screenshots/21-weather-rain-night.png",
+    "page_id": 21,
+    "label": "雨 / 夜晚",
+    "sha256": "939d17b7c2bcc908b659690fe409a7c8caa4c164c19d38df3afa4dd2bfa404db"
+  },
+  {
+    "file": "screenshots/21-weather-snow-day.png",
+    "page_id": 21,
+    "label": "雪 / 白天",
+    "sha256": "9084cd2ee362d8c32e1a90a8222d0213a43c01118057c8bb4d45003a20610a82"
+  },
+  {
+    "file": "screenshots/21-weather-snow-night.png",
+    "page_id": 21,
+    "label": "雪 / 夜晚",
+    "sha256": "5bb94933b831497ac00f687dff0604e6ef86c2dcabc9681a63bc5a4ecb849413"
+  },
+  {
+    "file": "screenshots/21-weather-sun-day.png",
+    "page_id": 21,
+    "label": "晴 / 白天",
+    "sha256": "20b3f1ccb2a9687b53d0b1fba404e330680257d93646a044a296e039d9daeb24"
+  },
+  {
+    "file": "screenshots/21-weather-sun-night.png",
+    "page_id": 21,
+    "label": "晴 / 夜晚",
+    "sha256": "209b362350e903646f25b249daf9e645ada78b8892b760afef4206f1bc496bfc"
+  }
+]

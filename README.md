@@ -1,45 +1,48 @@
-# GPT Voice 桌面智能终端
+# GPT Voice 1.0.0
 
-基于立创实战派 ESP32-S3 V1.0.1（16 MB Flash / 8 MB PSRAM），使用 PlatformIO、ESP-IDF 5.5 和 LVGL 8.3。
+立创实战派 ESP32-S3 V1.0.1 桌面终端，16 MB Flash / 8 MB PSRAM，320×240 横屏。基于 PlatformIO、ESP-IDF 5.5、LVGL 8.3。
 
 ## 使用
 
-- 开机进入天气与时间看板，左右滑动进入应用菜单。菜单支持分页，点击图标进入应用，顶部返回键逐级返回，主页键直接回看板。
-- 应用：设置、音乐、游戏、图片、GPT Voice、文件管理，以及 Home Assistant“开发中”入口。
-- 设置中连接 Wi-Fi；连接信息、亮度、音量、城市等保存到 NVS，重启保留。
-- 首次联网自动 SNTP 校时，默认北京时间，每 24 小时再次同步。天气每 15 分钟刷新，断网保留本次启动期间的缓存。
-- 音乐优先扫描 SD 卡 `/Music`，没有音乐时扫描根目录及子目录；支持 MP3 和 16-bit PCM WAV。图片从 `/Pictures` 浏览，无此目录时可从根目录选择 JPEG/PNG。
-- 文件管理点击文件进入操作页，长按文件夹可重命名或删除空文件夹。删除须再次确认；正在播放或暂停占用的文件不能修改。
-- 游戏包含雷电突击、羊了个羊式层叠三消和 Color Flood。雷电突击以姿态控制位置、自动射击，拾取 S 散射 / L 激光 / W 双翼装备升级（最高 3 级），+ 恢复生命并提供短暂无敌；开始／恢复时校准，灵敏度在游戏菜单调整。三消采用原创农场图案、七格暂存槽和三张消除，支持一次撤回、两次洗牌，初始牌局保证存在解。
-- 音乐可后台播放。进入语音会话暂停音乐，退出语音页结束会话，音乐由用户手动恢复。
-- 蓝牙支持 BLE 扫描、连接与免输入安全配对；需要密码／数字确认的设备会明确提示首版不支持，不包含经典蓝牙音箱协议。
+- 开机显示真实时间与天气，左右滑动进入应用菜单。每页四个图标，第一页为 GPT Voice、音乐、游戏、图片，第二页为设置、文件管理及 Home Assistant 预留入口。左箭头逐级返回，主页按钮回到看板。
+- BOOT 单击关闭或打开背光，长按只切换一次。开机默认亮屏，恢复使用保存的亮度。熄屏期间音乐、语音和网络继续运行；复位键保持复位功能。
+- 设置中连接 Wi-Fi、调整亮度/音量/体感灵敏度、设置天气城市、开启网页配置。配置保存到 NVS。当前 Wi-Fi 的密码输入框留空可使用已保存密码重新连接。
+- 联网后 SNTP 校准北京时间，之后每 24 小时同步；Open-Meteo 天气每 15 分钟刷新，断网保留本次开机已有缓存。天气效果预览可切换晴、云、雨、雪及昼夜，预览数据不写入真实天气。
+- 音乐读取 SD 卡 `/Music`，没有可用曲目时搜索根目录及子目录。支持 MP3 和 8–48 kHz、PCM16、单/双声道 WAV。音乐可在后台播放；进入语音页自动暂停，退出后点击播放继续。播放器提供前后曲、音量及已播放时间，不含拖动定位。
+- 图片浏览从 `/Pictures` 开始，没有该目录则使用 SD 根目录；支持基线 JPEG/PNG（含大写扩展名和 `.jpeg`），文件最大 1 MiB、单边最多 2047 像素、像素总数最多 1,048,576。文件管理支持挂载、卸载、浏览、新建文件夹、重命名和确认删除。长按文件夹进入操作页；删除仅支持文件或空文件夹，正在播放/暂停占用的文件不能修改。
+- 游戏包含雷电突击、层叠三消和 Color Flood。雷电使用姿态控制、自动射击、武器与生命掉落，开始/恢复时校准；三消有七格暂存槽、一次撤回及两次洗牌；Color Flood 限 25 步。
+- BLE 提供扫描、连接和免输入安全配对。暂不支持密码/数字确认配对、经典蓝牙音箱或具体 GATT 业务。Home Assistant 页面明确标注“开发中”，不包含设备控制。
 
-## 语音与网页配置
+## 语音配置
 
-1. 在设备“设置 / 网页与语音配置”开启配置网页。
-2. 同一局域网浏览器访问屏幕显示的地址，输入设备屏幕配对码。
-3. 填写 StepFun API Key；默认模型是 `stepaudio-3-realtime-preview`，声音是 `soft-spoken-gentleman`。使用 Step Plan 套餐时，接口地址填写 `wss://api.stepfun.com/step_plan/v1/realtime`，模型填写 `stepaudio-2.5-realtime`，音色可填写官方示例的 `linjiajiejie`；地址不需要带模型查询参数。参见 [Step Plan 语音接入](https://platform.stepfun.com/docs/zh/step-plan/integrations/audio-api)。
-4. 模型、声音、WebSocket 地址可以修改。密钥字段留空保留原值；页面不回显已存密钥。
-5. 天气工具使用无需密钥的 Open-Meteo。实时语音会话显式启用阶跃原生 `web_search`，由服务器执行，无需额外填写 Tavily Key。Tavily 仅作为可选备用搜索，填写 Key 后才向模型提供 `external_web_search`。参见 [Realtime 内置搜索说明](https://platform.stepfun.com/docs/zh/guides/developer/realtime#网络搜索工具-web_search)。
-6. 配置网页 10 分钟后自动关闭。仅在可信局域网开启；个人开发版没有启用 Flash 加密。
+1. 在“设置 → 网页与语音配置”开启网页，同一局域网浏览器访问屏幕显示的地址。
+2. 输入设备屏幕配对码与 StepFun API Key。密钥留空保留原值，网页不会读取或回显保存的密钥。
+3. 使用 Step Plan 时，地址填 `wss://api.stepfun.com/step_plan/v1/realtime`，模型填 `stepaudio-2.5-realtime`，音色可用 `linjiajiejie`。地址不包含 `?model=` 参数。默认普通 API 配置为 `wss://api.stepfun.ai/v1/realtime`、`stepaudio-3-realtime-preview`。
+4. Step Plan 新闻/资料查询走官方 StepSearch MCP，沿用已有阶跃密钥。Tavily 是单独提供 Key 后启用的备用工具。第三方 API 使用按供应商规则计费。
+5. 默认要求两三句、60 个汉字以内；新闻先概括两条重点，用户追问后再展开。网址放在“来源”页，语音不朗读来源清单。此长度是模型指令，不截断音频句子。无可核验结果时明确说明，日期与星期的明确问句直接读取校准时钟。
 
-实时语音已实现流式音频、服务端 VAD、取消旧回答、字幕、工具回传、ESP-SR AEC 和 16/24 kHz 转换。真实服务会话和扬声器回声效果需要有效密钥及实机说话验收，不能仅凭编译通过视为验证完成。
+配置网页 10 分钟后关闭，提交必须携带配对码。只在可信局域网开启。个人设备固件未启用 Flash 加密、安全启动或 OTA；发布包不包含 NVS 与任何密钥。实际联网能力依赖账户、网络和供应商接口。
 
-## 开发命令
+## 开发与烧录
 
 ```bash
 bash dev.sh build
-bash dev.sh flash-usb
-bash dev.sh monitor
 bash scripts/test_host.sh
-python3 scripts/demo_serial.py status
-python3 scripts/demo_serial.py 'page 0' shot --output artifacts/home.log
+bash dev.sh flash-usb
+python3 scripts/device_console.py artifacts/device-session
 ```
 
-构建脚本处理路径中的空格，产物位于 `.pio/build/szp_s3/`，日志在 `artifacts/`。主机测试覆盖音频采样计数、分块连续性、波形电平、SD 路径限制以及层叠牌局可解性、三消规则、射击碰撞和装备升级。截图是实际 LVGL framebuffer，不替代触摸或扬声器听感验收。
+依赖 PlatformIO 6.x（常见安装位置 `~/.platformio/penv`）、主机 C/C++ 编译器和 Python 3；截图脚本还需要 Pillow。`platformio.ini` 与 `dependencies.lock` 固定平台及组件版本。`PLATFORMIO_CORE_DIR` 可指定其他 PlatformIO 目录。
 
-新增应用使用 `terminal_app_t` 和 `shell_register_app()`，提供独立的创建／进入／离开／销毁回调；内容根节点由 `shell_content()` 获取。自定义应用 ID 使用 100 以上，注册描述符保持静态生命周期。后台服务通过 `terminal_submit()` 提交有界作业。新增语音工具在 `services/tools.c` 的工具表登记描述、参数与执行函数。
+构建脚本处理项目路径中的空格，产物在 `.pio/build/szp_s3/`，临时日志在 `artifacts/`。原机使用原生 USB JTAG 接口烧录、CH340 接口查看日志；串口路径在 `platformio.ini` 和脚本中可调整。串口工具支持 `status`、`ui`、`page N`、`tap X Y`、`swipe X Y X2 Y2`，`:shot name` 保存 PNG，`:quit` 退出且不复位设备。不要同时打开多个串口读者。
 
-详细说明：[架构](docs/ARCHITECTURE.md)、[验证记录](docs/VALIDATION.md)、[历史硬件测试](docs/HARDWARE_DEMO.md)。原始 Flash 和完整测试归档保留于 `backups/`，未更改 SD 卡原有文件。
+发布包附有分区表、bootloader、应用固件和校验清单。相同分区布局升级不擦除 NVS，保留 Wi-Fi/API 配置；不要执行 `erase_flash`。该分区布局不适用于其他板型。
 
-菜单采用每页四个大图标，Wi-Fi 状态固定显示在所有页面顶端。游戏将管理按钮合并到顶栏，游戏区域为 312×200。姿态任务以 100 Hz 为调度目标（本轮游戏实测约 70–80 Hz），12 ms 时间常数滤波；雷电以 20 ms 逻辑周期更新，并保留小角度死区和灵敏度设置。实际显示帧率取决于面板传输负载。
+## 项目资料
+
+- [版本说明](docs/RELEASE.md)、[本次验证及边界](docs/VALIDATION.md)
+- [全部页面截图](validation/1.0.0/index.html)
+- [架构与扩展](docs/ARCHITECTURE.md)、[语音维护要求](docs/VOICE_BASELINE.md)
+- [硬件诊断与复测](docs/TESTING.md)
+
+`src/` 是应用和板级驱动，`components/audio_player/` 是保留许可及本地修复记录的播放器组件，`tests/` 与 `scripts/` 用于构建和验证。字体、板级驱动及第三方组件许可随源码保留。历史演示、旧日志和私有整片 Flash 备份保存在项目目录之外的“项目归档”，不进入 1.0.0 发布包。

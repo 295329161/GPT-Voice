@@ -21,12 +21,15 @@ static bool sntp_started;
 typedef struct {
     char *data;
     size_t used, capacity;
+    bool overflow;
 } response_t;
 static esp_err_t http_event(esp_http_client_event_t *e) {
     response_t *r = e->user_data;
     if (e->event_id == HTTP_EVENT_ON_DATA) {
-        if (r->used + e->data_len >= r->capacity)
+        if (r->overflow || e->data_len < 0 || (size_t)e->data_len >= r->capacity - r->used) {
+            r->overflow = true;
             return ESP_ERR_NO_MEM;
+        }
         memcpy(r->data + r->used, e->data, e->data_len);
         r->used += e->data_len;
         r->data[r->used] = 0;
@@ -43,7 +46,8 @@ static char *request(const char *url, const char *post, const char *key) {
                                     .crt_bundle_attach = esp_crt_bundle_attach,
                                     .event_handler = http_event,
                                     .user_data = &r,
-                                    .buffer_size = 2048};
+                                    .buffer_size = 2048,
+                                    .disable_auto_redirect = true};
     esp_http_client_handle_t h = esp_http_client_init(&cfg);
     if (!h) {
         free(r.data);
@@ -62,7 +66,7 @@ static char *request(const char *url, const char *post, const char *key) {
     esp_err_t e = esp_http_client_perform(h);
     int status = esp_http_client_get_status_code(h);
     esp_http_client_cleanup(h);
-    if (e != ESP_OK || status != 200) {
+    if (e != ESP_OK || status != 200 || r.overflow) {
         free(r.data);
         return NULL;
     }
@@ -297,7 +301,7 @@ static esp_err_t post_config(httpd_req_t *r) {
         strspn(c.model, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_.") !=
             strlen(c.model))
         return httpd_resp_send_err(r, HTTPD_400_BAD_REQUEST, "配置字段无效");
-    if (terminal_config_save(&c) != ESP_OK) {
+    if (terminal_config_update(&c, CONFIG_VOICE) != ESP_OK) {
         return httpd_resp_send_err(r, HTTPD_500_INTERNAL_SERVER_ERROR, "保存失败");
     }
     if (city[0]) {
@@ -363,9 +367,10 @@ void network_job(const terminal_job_t *j) {
         }
         terminal_config_t c;
         config_snapshot(&c);
+        bool keep_password = j->value == 1 && !strcmp(c.ssid, j->a) && !j->b[0];
         strcpy(c.ssid, j->a);
-        strcpy(c.password, j->b);
-        if (terminal_config_save(&c) != ESP_OK)
+        if (!keep_password) strcpy(c.password, j->b);
+        if (terminal_config_update(&c, CONFIG_WIFI) != ESP_OK)
             return;
         wifi_config_t w = {0};
         memcpy(w.sta.ssid, c.ssid, strlen(c.ssid));
@@ -386,7 +391,7 @@ void network_job(const terminal_job_t *j) {
             c.longitude = lon;
             c.location_set = true;
             strcpy(c.city, name);
-            terminal_config_save(&c);
+            terminal_config_update(&c, CONFIG_LOCATION);
             terminal_notice("天气城市：%s", name);
             update_weather();
         } else

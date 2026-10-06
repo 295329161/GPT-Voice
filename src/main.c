@@ -1,4 +1,5 @@
 #include "apps/shell.h"
+#include "esp_app_desc.h"
 #include "core/terminal.h"
 #include "esp32_s3_szp.h"
 extern esp_err_t pca9557_register_write_byte(uint8_t, uint8_t);
@@ -9,7 +10,7 @@ void app_main(void) {
     ESP_ERROR_CHECK(pca9557_register_write_byte(PCA9557_OUTPUT_PORT, 0x05));
     ESP_ERROR_CHECK(pca9557_register_write_byte(PCA9557_CONFIGURATION_PORT, 0xf8));
     bsp_lvgl_start();
-    bsp_display_brightness_set(config.brightness);
+    backlight_init();
     lvgl_port_lock(0);
     shell_init();
     lvgl_port_unlock();
@@ -20,5 +21,5 @@ void app_main(void) {
     ble_init();
     terminal_submit(JOB_MOUNT, NULL, NULL, 0);
     console_init();
-    ESP_LOGI("terminal", "READY desktop v0.1");
+    ESP_LOGI("terminal", "READY desktop v%s", esp_app_get_description()->version);
 }
