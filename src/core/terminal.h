@@ -109,6 +109,7 @@ void voice_stop(void);
 void voice_init(void);
 void voice_request(bool enable);
 void voice_poll(void);
+void voice_diagnostics(void);
 void sensors_init(void);
 char *weather_tool(const char *city);
 char *search_tool(const char *query);

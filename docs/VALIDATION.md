@@ -56,3 +56,7 @@
 原生搜索接入修正：依据官方中文 Realtime 开发指南启用 tools 中的 `type: web_search`；之前只注册自定义 Tavily 搜索属于接入遗漏。备用工具更名为 external_web_search，未填备用 Key 时不向模型公布。构建与烧录日志：`voice-search-build.log`、`voice-search-flash.log`；服务端 session.updated 回传工具列表，确认包含 web_search；用户确认按明确搜索提示能得到新闻结果，屏幕提到来源名称。未独立核验每条新闻的原文链接，不能仅凭模型自述认定来源准确。
 
 打断修复：长新闻期间曾出现上传队列满而停止采集，导致无法打断、之后触发服务端闲置超时。现上传短时拥塞丢弃最旧帧并继续采集；接收线程直接处理 speech_started 的静音与播放代次失效，旧音频不会等待普通事件队列才被清理。消息改为已解析 JSON 与接收代次，统一释放，防止迟到的旧 response.created 恢复旧播放。回归测试、编译、烧录通过（voice-barge-*.log）；实机已记录打断丢弃 8 个待播块并继续产生下一轮回答，实际听感与多次打断由用户继续验证。
+
+新闻查询后无响应的后续排查：`voice-barge-live.log` 中最后应用事件约在开机 73 秒，之后麦克风/上传持续至 600 秒，期间没有新的服务事件。旧版本没有接收计数，尚不能据此断定是服务器停顿还是客户端丢弃消息。修复 WebSocket FIN/continuation 跨帧组包，新增 ASan/UBSan 测试覆盖单帧分块、多帧分块、穿插 Ping、空 FIN、异常偏移和累计超限（`voice-recovery-tests.log`）。新增 30 秒应用事件空闲探测、15 秒探测回复期限、45 秒回答无进展期限，最多自动恢复两次；恢复保留屏幕历史，但服务器上下文重新开始，需要重说问题。`status` 增加接收/事件年龄、JSON 错误计数和三条队列深度，不记录密钥或音频内容。编译和保留 NVS 的 USB 刷写通过（`voice-recovery-build.log` / `voice-recovery-flash.log`）；新闻复现、超时恢复和长时间运行需继续实测。
+
+新版实机复测：用户反馈“这次挺好的”。`voice-recovery-live.log` 记录连续多轮 completed 回答；约 94 秒诊断显示 invalid=0、消息/播放队列为空、上传队列 2 帧。约 134 秒发出空 session.update 健康探测，约 80 ms 后收到 session.updated，模型/VAD/三项工具配置保留，证明探测不会被服务端拒绝。尚未人工注入服务端卡死来验证完整的自动重连路径；旧故障的具体上游原因仍未证实。

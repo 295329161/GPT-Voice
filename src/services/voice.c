@@ -1,5 +1,6 @@
 #include "cJSON.h"
 #include "core/conversation.h"
+#include "core/ws_text.h"
 #include "core/resampler.h"
 #include "core/terminal.h"
 #include "esp32_s3_szp.h"
@@ -38,13 +39,18 @@ typedef struct {
 static atomic_bool running, session_ready, desired, initialized, playback_blocked;
 typedef struct {
     cJSON *event;
-    unsigned generation;
+    unsigned generation, connection;
 } message_packet_t;
 static atomic_uint lifecycle_request;
 static unsigned lifecycle_applied;
 static atomic_uint epoch;
-static char *fragment;
-static size_t received, total;
+static ws_text_t incoming;
+static atomic_uint last_rx_ms, last_event_ms, probe_ms, progress_ms;
+static atomic_uint rx_events, json_errors;
+static atomic_bool awaiting_response, recovery_needed;
+static unsigned recovery_attempts;
+static bool recovering;
+static uint32_t now_ms(void) { return (uint32_t)(esp_timer_get_time() / 1000); }
 static aec_handle_t *aec;
 static wifi_ps_type_t previous_wifi_ps;
 static bool restore_wifi_ps;
@@ -74,8 +80,9 @@ static bool send_json(cJSON *j) {
     int n =
         ws && running ? esp_websocket_client_send_text(ws, s, strlen(s), pdMS_TO_TICKS(1500)) : -1;
     xSemaphoreGive(send_mutex);
+    bool complete = n == (int)strlen(s);
     free(s);
-    return n > 0;
+    return complete;
 }
 static void simple(const char *type) {
     cJSON *j = cJSON_CreateObject();
@@ -208,6 +215,7 @@ static void parse(cJSON *j, unsigned generation) {
     if (!j)
         return;
     const char *type = str(j, "type");
+    if (generation == epoch && !strncmp(type, "response.", 9)) progress_ms = now_ms();
     if (strcmp(type, "response.audio.delta") && strcmp(type, "response.audio_transcript.delta"))
         ESP_LOGI("voice", "event %.80s", type);
     if (!strcmp(type, "session.created"))
@@ -224,8 +232,11 @@ static void parse(cJSON *j, unsigned generation) {
         cJSON_ArrayForEach(reported_tool, reported_tools)
             ESP_LOGI("voice", "server tool type=%s name=%s", str(reported_tool, "type"),
                      str(cJSON_GetObjectItem(reported_tool, "function"), "name"));
-        session_ready = true;
-        status("正在聆听 · 可以随时说话");
+        probe_ms = 0;
+        if (!session_ready) {
+            session_ready = true;
+            status(recovering ? "已恢复连接，请重说刚才的问题" : "正在聆听 · 可以随时说话");
+        }
     } else if (!strcmp(type, "input_audio_buffer.speech_started")) {
         if (current_response[0]) {
             snprintf(cancelled_response, sizeof(cancelled_response), "%s", current_response);
@@ -233,7 +244,12 @@ static void parse(cJSON *j, unsigned generation) {
         }
         // The WebSocket callback already muted and invalidated old audio.
         resampler_init(&down, 24000, 16000);
+        awaiting_response = false;
         status("正在聆听");
+    } else if (!strcmp(type, "input_audio_buffer.speech_stopped")) {
+        awaiting_response = true;
+        progress_ms = now_ms();
+        status("正在思考 / 查询，请稍候");
     } else if (!strcmp(type, "input_audio_buffer.committed")) {
         conversation_user_begin(conversation, str(j, "item_id"));
         transcript_refresh();
@@ -243,7 +259,9 @@ static void parse(cJSON *j, unsigned generation) {
         if (generation == epoch) playback_blocked = false;
         conversation_response_begin(conversation, current_response);
         transcript_refresh();
-        status("正在回答");
+        awaiting_response = true;
+        progress_ms = now_ms();
+        status("正在思考 / 回答");
     } else if (!strcmp(type, "response.audio.delta")) {
         if (playback_blocked || generation != epoch) goto done;
         const char *rid = str(j, "response_id");
@@ -292,8 +310,16 @@ static void parse(cJSON *j, unsigned generation) {
     } else if (!strcmp(type, "response.done")) {
         const char *rid = str(cJSON_GetObjectItem(j, "response"), "id");
         if (*rid && strcmp(rid, current_response)) goto done;
+        cJSON *response = cJSON_GetObjectItem(j, "response");
+        ESP_LOGI("voice", "response finished status=%s", str(response, "status"));
+        // Function-only responses need a tool result and a continuation response.
+        bool tool_pending = false;
+        cJSON *output;
+        cJSON_ArrayForEach(output, cJSON_GetObjectItem(response, "output"))
+            if (!strcmp(str(output, "type"), "function_call")) tool_pending = true;
+        awaiting_response = tool_pending;
         current_response[0] = 0;
-        status("正在聆听");
+        status(tool_pending ? "正在查询，请稍候" : "正在聆听");
     } else if (!strcmp(type, "error")) {
         cJSON *error = cJSON_GetObjectItem(j, "error");
         const char *code = str(error, "code");
@@ -317,7 +343,7 @@ static void message_worker(void *arg) {
     for (;;) {
         xQueueReceive(messages, &message, portMAX_DELAY);
         xSemaphoreTake(parse_mutex, portMAX_DELAY);
-        if (running)
+        if (running && message.connection == connection_generation)
             parse(message.event, message.generation);
         xSemaphoreGive(parse_mutex);
         cJSON_Delete(message.event);
@@ -330,44 +356,48 @@ static void websocket_event(void *arg, esp_event_base_t base, int32_t event, voi
     } else if (event == WEBSOCKET_EVENT_DISCONNECTED || event == WEBSOCKET_EVENT_ERROR) {
         session_ready = false;
         status("会话已断开，请退出后重新进入");
-    } else if (event == WEBSOCKET_EVENT_DATA && (e->op_code == 1 || e->op_code == 0)) {
-        if (e->payload_offset == 0) {
-            free(fragment);
-            fragment = NULL;
-            received = 0;
-            total = e->payload_len;
-            if (total > MESSAGE_MAX)
-                return;
-            fragment = malloc(total + 1);
-        }
-        if (!fragment || e->payload_offset != received || received + e->data_len > total)
+    } else if (event == WEBSOCKET_EVENT_DATA) {
+        last_rx_ms = now_ms();
+        if (e->op_code != 1 && e->op_code != 0) return;
+        int assembled = ws_text_feed(&incoming, e->op_code, e->fin, e->payload_len,
+                                     e->payload_offset, e->data_ptr, e->data_len, MESSAGE_MAX);
+        if (assembled < 0) {
+            json_errors++;
+            ESP_LOGW("voice", "invalid/oversized text frame op=%u fin=%u size=%d offset=%d",
+                     e->op_code, e->fin, e->payload_len, e->payload_offset);
+            recovery_needed = true;
             return;
-        memcpy(fragment + received, e->data_ptr, e->data_len);
-        received += e->data_len;
-        if (received == total) {
-            fragment[total] = 0;
-            cJSON *j = cJSON_Parse(fragment);
-            free(fragment);
-            fragment = NULL;
-            if (!j) return;
-            if (!strcmp(str(j, "type"), "input_audio_buffer.speech_started")) {
-                // Do not let a barge-in wait behind buffered audio events.
-                playback_blocked = true;
-                unsigned queued = uxQueueMessagesWaiting(playback);
-                atomic_fetch_add(&epoch, 1);
-                xQueueReset(playback);
-                pa_en(0);
-                ESP_LOGI("voice", "barge-in: muted speaker, discarded %u audio blocks", queued);
-            }
-            message_packet_t message = {.event = j, .generation = epoch};
-            if (xQueueSend(messages, &message, 0) != pdTRUE) {
-                cJSON_Delete(j);
-                session_ready = false;
-                status("消息队列拥塞，请重新连接");
-            }
+        }
+        if (!assembled) return;
+        cJSON *j = cJSON_Parse(incoming.data);
+        ws_text_reset(&incoming);
+        if (!j) {
+            json_errors++;
+            ESP_LOGW("voice", "invalid JSON message (payload omitted)");
+            recovery_needed = true;
+            return;
+        }
+        last_event_ms = now_ms();
+        rx_events++;
+        if (!strcmp(str(j, "type"), "input_audio_buffer.speech_started")) {
+            playback_blocked = true;
+            unsigned queued = uxQueueMessagesWaiting(playback);
+            atomic_fetch_add(&epoch, 1);
+            xQueueReset(playback);
+            pa_en(0);
+            ESP_LOGI("voice", "barge-in: muted speaker, discarded %u audio blocks", queued);
+        }
+        message_packet_t message = {.event = j, .generation = epoch,
+                                    .connection = connection_generation};
+        if (xQueueSend(messages, &message, 0) != pdTRUE) {
+            cJSON_Delete(j);
+            session_ready = false;
+            recovery_needed = true;
+            status("消息处理拥塞，正在恢复连接");
         }
     }
 }
+
 static void upload_task(void *arg) {
     upload_packet_t packet;
     int16_t *batch = heap_caps_malloc(4 * sizeof(packet.pcm), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
@@ -562,8 +592,7 @@ void voice_stop(void) {
         restore_wifi_ps = false;
     }
     xSemaphoreGive(send_mutex);
-    free(fragment);
-    fragment = NULL;
+    ws_text_reset(&incoming);
     if (aec) {
         aec_destroy(aec);
         aec = NULL;
@@ -618,7 +647,7 @@ void voice_start(void) {
     current_response[0] = cancelled_response[0] = 0;
     memset(submitted_calls, 0, sizeof(submitted_calls));
     submitted_call_index = 0;
-    conversation_reset(conversation);
+    if (!recovering) conversation_reset(conversation);
     playback_blocked = false;
     char uri[320], headers[320];
     snprintf(uri, sizeof(uri), "%s?model=%s", c.endpoint, c.model);
@@ -643,10 +672,14 @@ void voice_start(void) {
     esp_websocket_register_events(ws, WEBSOCKET_EVENT_ANY, websocket_event, NULL);
     if (esp_wifi_get_ps(&previous_wifi_ps) == ESP_OK && esp_wifi_set_ps(WIFI_PS_NONE) == ESP_OK)
         restore_wifi_ps = true;
+    last_rx_ms = last_event_ms = progress_ms = now_ms();
+    probe_ms = 0;
+    awaiting_response = recovery_needed = false;
+    rx_events = json_errors = 0;
     running = true;
     state_lock();
     state->voice_active = true;
-    state->transcript[0] = 0;
+    if (!recovering) state->transcript[0] = 0;
     state_unlock();
     status("正在连接 StepAudio…");
     esp_err_t err = esp_websocket_client_start(ws);
@@ -673,11 +706,54 @@ void voice_poll(void) {
     if (!initialized)
         return;
     unsigned requested = lifecycle_request;
-    if (requested == lifecycle_applied)
+    if (requested == lifecycle_applied) {
+        if (!running || !desired) return;
+        uint32_t now = now_ms();
+        uint32_t probe = probe_ms;
+        const char *reason = NULL;
+        if (recovery_needed) reason = "receive failure";
+        else if (awaiting_response && (int32_t)(now - progress_ms) > 45000) reason = "response stalled";
+        else if (probe && (int32_t)(now - probe) > 15000) reason = "session probe unanswered";
+        else if (!session_ready && (int32_t)(now - last_event_ms) > 20000) reason = "session not ready";
+        if (reason) {
+            voice_diagnostics();
+            ESP_LOGW("voice", "recovering: %s attempt=%u", reason, recovery_attempts + 1);
+            status("语音服务长时间无响应，正在重新连接");
+            voice_stop();
+            if (++recovery_attempts <= 2 && desired) {
+                recovering = true;
+                voice_start();
+            } else {
+                status("语音服务未响应，请退出重进后重试");
+            }
+        } else if (session_ready && !probe_ms && (int32_t)(now - last_event_ms) > 30000) {
+            // Ping/Pong only proves the socket is alive; require an application ACK.
+            probe_ms = now;
+            cJSON *j = cJSON_CreateObject();
+            cJSON_AddStringToObject(j, "type", "session.update");
+            cJSON_AddObjectToObject(j, "session");
+            if (!send_json(j)) recovery_needed = true;
+            cJSON_Delete(j);
+            ESP_LOGI("voice", "session health probe sent");
+        }
         return;
+    }
     lifecycle_applied = requested;
+    recovery_attempts = 0;
+    recovering = false;
     if (ws)
         voice_stop();
     if (desired)
         voice_start();
+}
+
+void voice_diagnostics(void) {
+    uint32_t now = now_ms();
+    ESP_LOGI("voice", "health ready=%u blocked=%u waiting=%u rx_age_ms=%lu event_age_ms=%lu "
+             "events=%u invalid=%u queues=%u/%u/%u",
+             (unsigned)session_ready, (unsigned)playback_blocked, (unsigned)awaiting_response,
+             (unsigned long)(now - last_rx_ms), (unsigned long)(now - last_event_ms),
+             (unsigned)rx_events, (unsigned)json_errors,
+             (unsigned)uxQueueMessagesWaiting(messages), (unsigned)uxQueueMessagesWaiting(playback),
+             (unsigned)uxQueueMessagesWaiting(upload));
 }

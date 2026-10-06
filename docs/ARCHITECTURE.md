@@ -48,3 +48,5 @@
 ## 硬件测试基线
 
 原始硬件测试程序保留于 `docs/hardware_demo.c.reference`，基线 Git 提交为 `31ad46c`；已有 Flash 备份仍在 `backups/`。当前分区将应用扩大为 10 MB，以容纳字体、BLE、TLS 和 AEC。没有 OTA 分区。
+
+语音接收使用 `core/ws_text` 按 WebSocket FIN 与 continuation 合并消息，并检查每帧偏移和累计长度；控制帧不会打断组包。消息同时带连接代次与播放代次，重连后的旧事件不会写入新会话。服务 worker 定期检查回答进度，并在应用事件空闲时发送空 session.update 探测；探测超时、回答无进展或接收损坏会触发最多两次重连。自动重连保留本地历史显示，不会自动重发用户问题或恢复远端上下文。

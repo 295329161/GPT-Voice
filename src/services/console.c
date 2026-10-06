@@ -38,6 +38,7 @@ static void task(void *arg) {
                    (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL),
                    (unsigned)uxTaskGetNumberOfTasks());
             state_unlock();
+            voice_diagnostics();
         } else if (!strncmp(line, "wifi ", 5)) {
             char *separator = strchr(line + 5, '\t');
             if (separator) {
