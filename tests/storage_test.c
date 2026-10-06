@@ -9,7 +9,8 @@
 
 static terminal_state_t saved_state;
 terminal_state_t *state = &saved_state;
-static int mode, position;
+static int mode, position, open_calls;
+static bool usb_busy;
 static struct dirent entry;
 static char notice[192];
 void state_lock(void) {}
@@ -28,8 +29,9 @@ esp_err_t esp_vfs_fat_info(const char *p, uint64_t *t, uint64_t *f) {
 }
 void media_job(const terminal_job_t *j) { (void)j; }
 bool media_busy_path(const char *p) { (void)p; return false; }
+bool usb_transfer_busy(void) { return usb_busy; }
 
-DIR *__wrap_opendir(const char *p) { (void)p; position = 0; return (DIR *)&entry; }
+DIR *__wrap_opendir(const char *p) { (void)p; open_calls++; position = 0; return (DIR *)&entry; }
 int __wrap_closedir(DIR *d) { (void)d; return 0; }
 struct dirent *__wrap_readdir(DIR *d) {
     (void)d;
@@ -68,5 +70,11 @@ int main(void) {
     assert(!strcmp(state->files[0].name, "new.txt"));
     assert(!strcmp(state->directory, "/sdcard"));
     assert(!*notice);
+    reset(0); usb_busy = true; open_calls = 0;
+    storage_job(&list);
+    assert(open_calls == 0 && state->files_generation == 7);
+    assert(!strcmp(state->files[0].name, "original.txt"));
+    assert(strstr(notice, "USB"));
+    usb_busy = false;
     puts("SD read errors, duplicate/invalid entries and stat failures preserve last valid listing PASS");
 }

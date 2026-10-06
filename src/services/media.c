@@ -1,5 +1,6 @@
 #include "audio_player.h"
 #include "core/terminal.h"
+#include "services/usb_transfer.h"
 #include "esp32_s3_szp.h"
 #include "esp_heap_caps.h"
 #include "esp_timer.h"
@@ -237,6 +238,10 @@ void media_job(const terminal_job_t *j) {
             vTaskDelay(pdMS_TO_TICKS(10));
         return;
     }
+    if (usb_transfer_busy()) {
+        terminal_notice("请先结束 USB 传输");
+        return;
+    }
     if (state->voice_active) {
         terminal_notice("请先结束语音会话");
         return;
@@ -289,4 +294,13 @@ void media_job(const terminal_job_t *j) {
         play(playlist[index_now]);
     else
         terminal_notice("/Music 中没有 MP3 或 WAV");
+}
+void media_storage_changed(void) {
+    // A computer can rename/delete every old playlist entry while it owns SD.
+    total = 0;
+    index_now = 0;
+    state_lock();
+    state->music_path[0] = 0;
+    state->music_elapsed_ms = 0;
+    state_unlock();
 }

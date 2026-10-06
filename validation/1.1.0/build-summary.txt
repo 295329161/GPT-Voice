@@ -1,0 +1,6 @@
+GPT Voice 1.1.0
+ESP-IDF 5.5.0 / ESP32-S3 N16R8
+Flash application: 3,874,629 bytes / 10,485,760 bytes
+Static internal RAM: 72,180 bytes / 327,680 bytes
+Native USB and independent CH340 uploads: verified
+TinyUSB 0.19.0~3; SDMMC 1-bit 10 MHz; MSC buffer 512 bytes

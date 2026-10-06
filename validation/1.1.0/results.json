@@ -1,0 +1,68 @@
+{
+  "version": "1.1.0",
+  "date": "2026-10-07",
+  "firmware": [
+    {
+      "file": "firmware.bin",
+      "bytes": 3875040,
+      "sha256": "46edea51269491ab7e3713cfb242a5d0e66f8423870dcb3edf7804e20dc0748c"
+    },
+    {
+      "file": "bootloader.bin",
+      "bytes": 21088,
+      "sha256": "d09359586db3b0ed971864f7543608dff443e1dc89d66a46165f77f496128a8a"
+    },
+    {
+      "file": "partitions.bin",
+      "bytes": 3072,
+      "sha256": "ef38c1c8bdb24a2006840e0b411327c92ac382d3138835ada6b6a8448d0db3a7"
+    },
+    {
+      "file": "firmware.elf",
+      "bytes": 22166224,
+      "sha256": "ebda4545b0f66ea06f836eac3ba5cdee24e351d7055298b8d8e235e5f3bf3928"
+    }
+  ],
+  "checks": {
+    "host_c_cpp_sanitizer_suites": 14,
+    "python_test_cases": 2,
+    "linux_msc_copy_rename_delete": "pass",
+    "reconnect_sha256_original_and_copied": "pass",
+    "original_root_entries": 5,
+    "ui_enable_confirmation_cancel": "pass",
+    "initial_nohost_60s": "pass_software_disconnect_on_real_device",
+    "waiting_cancel": "pass",
+    "safe_eject_cycles_after_regressions": 3,
+    "internal_heap_after_each_repeat": [
+      61507,
+      61507,
+      61507
+    ],
+    "usb_task_released": "pass_25_to_24_tasks",
+    "boot_backlight_after_usb": "pass",
+    "native_usb_restoration": "pass",
+    "independent_ch340_flash": "pass",
+    "flash_protection_during_msc": "pass",
+    "copied_png_display": "pass",
+    "music_voice_music_output": "pass_PA_and_DAC_measured",
+    "voice_datetime": "pass",
+    "voice_today_news": "completed_no_matching_date_found",
+    "voice_recent_news": "completed_two_short_items_no_spoken_urls"
+  },
+  "final_state": {
+    "usb": "off",
+    "sd": "mounted",
+    "page": "home",
+    "brightness": 77,
+    "volume": 65,
+    "test_files": "removed",
+    "nvs": "preserved"
+  },
+  "limits": [
+    "Windows/macOS not tested",
+    "Physical charger/no-data cable not tested",
+    "Suspend/resume and power-loss injection not tested",
+    "Voice regression uses text injection, not human microphone ASR/barge-in"
+  ],
+  "screenshots": "screenshots.json"
+}

@@ -20,6 +20,7 @@ typedef struct {
     void (*enter)(void);
     void (*leave)(void);
     void (*destroy)(void);
+    void (*draw_icon)(lv_obj_t *parent);
 } terminal_app_t;
 bool shell_register_app(const terminal_app_t *app);
 lv_obj_t *shell_content(void);

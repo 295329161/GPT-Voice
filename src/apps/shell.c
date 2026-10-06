@@ -6,6 +6,8 @@
 #include "esp_heap_caps.h"
 #include "weather_view.h"
 #include "music_view.h"
+#include "usb_transfer_view.h"
+#include "services/usb_transfer.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -33,7 +35,8 @@ enum {
     FLOOD,
     FILE_DETAIL,
     IMAGE_VIEW,
-    WEATHER_PREVIEW
+    WEATHER_PREVIEW,
+    USB_TRANSFER
 };
 static void settings_page(void), music_page(void), games_page(void), pictures_page(void),
     voice_page(void), files_page(void), ha_page(void);
@@ -43,6 +46,7 @@ static void voice_enter(void) {
 static void voice_leave(void) {
     voice_request(false);
 }
+static void usb_page(void) { usb_transfer_view_create(shell_content()); }
 static const terminal_app_t defaults[] = {
     {.id = VOICE,
      .name = "GPT Voice",
@@ -68,6 +72,8 @@ static const terminal_app_t defaults[] = {
      .icon = LV_SYMBOL_DIRECTORY,
      .color = 0x68acee,
      .create = files_page},
+    {.id = USB_TRANSFER, .name = "USB 传文件", .icon = "", .color = 0x76e4d4,
+     .create = usb_page, .draw_icon = usb_transfer_menu_icon},
     {.id = HA,
      .name = "Home Assistant",
      .icon = LV_SYMBOL_HOME,
@@ -232,10 +238,13 @@ static void menu_create(void) {
         lv_obj_set_style_bg_color(b, lv_color_hex(0x1b2b40), 0);
         lv_obj_set_style_bg_grad_color(b, lv_color_hex(0x243d53), 0);
         lv_obj_set_style_bg_grad_dir(b, LV_GRAD_DIR_VER, 0);
-        lv_obj_t *icon = ui_label(b, registry[i]->icon, 0, 5, 148);
-        lv_obj_set_style_text_align(icon, LV_TEXT_ALIGN_CENTER, 0);
-        lv_obj_set_style_text_color(icon, lv_color_hex(registry[i]->color), 0);
-        lv_obj_set_style_text_font(icon, &lv_font_montserrat_48, 0);
+        if (registry[i]->draw_icon) registry[i]->draw_icon(b);
+        else {
+            lv_obj_t *icon = ui_label(b, registry[i]->icon, 0, 5, 148);
+            lv_obj_set_style_text_align(icon, LV_TEXT_ALIGN_CENTER, 0);
+            lv_obj_set_style_text_color(icon, lv_color_hex(registry[i]->color), 0);
+            lv_obj_set_style_text_font(icon, &lv_font_montserrat_48, 0);
+        }
         lv_obj_t *name = ui_label(b, registry[i]->name, 0, 65, 148);
         lv_obj_set_style_text_align(name, LV_TEXT_ALIGN_CENTER, 0);
         if (registry[i]->id == HA)
@@ -579,6 +588,10 @@ static void image_next(lv_event_t *e) {
     }
 }
 static void image_page(void) {
+    if (usb_transfer_busy() || !state->mounted) {
+        ui_label(content, "请先结束 USB 传输并挂载 SD 卡", 0, 25, 294);
+        return;
+    }
     struct stat st;
     if (stat(selected, &st) || st.st_size > 1024 * 1024) {
         ui_label(content, "图片不可用或超过 1 MB", 0, 25, 294);
@@ -801,6 +814,8 @@ static void tick(lv_timer_t *timer) {
         return;
     if (active == HOME)
         weather_view_update(snapshot);
+    if (active == USB_TRANSFER)
+        usb_transfer_view_update(snapshot);
     if (active == WEATHER_PREVIEW)
         weather_view_preview(snapshot, preview_codes[preview_scene], preview_night);
     if (active == DISPLAY || active == SOUND) {

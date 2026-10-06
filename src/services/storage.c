@@ -1,4 +1,5 @@
 #include "core/terminal.h"
+#include "services/usb_transfer.h"
 #include "esp32_s3_szp.h"
 #include <dirent.h>
 #include <errno.h>
@@ -91,6 +92,10 @@ static void listing(const char *path) {
         terminal_notice("目录较大，仅显示前 96 项");
 }
 void storage_job(const terminal_job_t *j) {
+    if (usb_transfer_busy()) {
+        terminal_notice("SD 卡由电脑使用，请先结束 USB 传输");
+        return;
+    }
     if (j->kind == JOB_MOUNT) {
         esp_err_t e = state->mounted ? ESP_OK : bsp_sdcard_mount();
         state_lock();

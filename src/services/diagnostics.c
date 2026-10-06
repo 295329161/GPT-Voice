@@ -1,4 +1,5 @@
 #include "core/terminal.h"
+#include "services/usb_transfer.h"
 #include "diagnostic_images.h"
 #include <errno.h>
 #include <math.h>
@@ -39,6 +40,7 @@ static bool write_file(const char *name, const void *data, size_t n) {
     return ok;
 }
 void diagnostics_fixtures(bool create) {
+    if (usb_transfer_busy()) { printf("FIXTURES USB owns SD; refused\n"); return; }
     if (!state->mounted) { printf("FIXTURES SD not mounted\n"); return; }
     if (create) {
         if (mkdir(TEST_DIR,0775)) { printf("FIXTURES create refused: %s\n",strerror(errno)); return; }

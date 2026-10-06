@@ -9,6 +9,10 @@
 #define FILE_LIMIT 96
 #define PATH_SIZE 512
 #define BLE_LIMIT 24
+typedef enum {
+    USB_TRANSFER_OFF, USB_TRANSFER_PREPARING, USB_TRANSFER_WAITING,
+    USB_TRANSFER_CONNECTED, USB_TRANSFER_FINISHING, USB_TRANSFER_ERROR
+} usb_transfer_phase_t;
 
 typedef struct {
     uint32_t version;
@@ -56,6 +60,11 @@ typedef struct {
     int64_t music_elapsed_ms, music_started_ms;
     char voice_status[160], transcript[32768], voice_sources[8192];
     bool voice_active;
+    usb_transfer_phase_t usb_phase;
+    char usb_status[128];
+    unsigned usb_wait_seconds;
+    bool usb_writing, usb_reading, usb_suspended, usb_io_error;
+    uint64_t usb_read_bytes, usb_written_bytes;
     unsigned revision;
 } terminal_state_t;
 extern terminal_config_t config;
@@ -117,6 +126,7 @@ esp_err_t media_suspend(void);
 esp_err_t media_resume_clock(void);
 void media_audio_probe(void);
 bool media_busy_path(const char *path);
+void media_storage_changed(void);
 void ble_init(void);
 void ble_job(const terminal_job_t *job);
 void voice_start(void);

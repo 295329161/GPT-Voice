@@ -6,6 +6,8 @@
 
 ## 实机串口
 
+1.1 新增 `core/usb_disk` 的跨扇区写保护、越界、I/O 错误和计时回绕测试，以及传输中本机存储拦截、烧录保护与依赖锁同步测试。USB 实机测试步骤及边界见 [USB 使用说明](USB_TRANSFER.md) 和 [验证记录](VALIDATION_USB.md)。
+
 运行 `python3 scripts/device_console.py artifacts/session`。同一时刻只允许一个串口读取程序。脚本使用 Linux termios，打开与关闭不改变 DTR/RTS，不会像旧的串口助手一样意外复位。截图需要 Pillow。
 
 - `status`：网络、校时、SD、姿态、音频、内存、语音队列、音乐状态及背光。

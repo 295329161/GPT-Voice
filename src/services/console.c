@@ -1,5 +1,6 @@
 #include "apps/shell.h"
 #include "core/terminal.h"
+#include "services/usb_transfer.h"
 #include "driver/uart.h"
 #include "driver/gpio.h"
 #include "driver/ledc.h"
@@ -68,7 +69,14 @@ static void task(void *arg) {
                    gpio_get_level(GPIO_NUM_0));
             state_unlock();
             voice_diagnostics();
+            usb_transfer_diagnostics();
 
+        } else if (!strcmp(line, "usb-on")) {
+            usb_transfer_request(true);
+        } else if (!strcmp(line, "usb-off")) {
+            usb_transfer_request(false);
+        } else if (!strcmp(line, "usb-test-nohost")) {
+            usb_transfer_test_nohost();
         } else if (!strncmp(line, "fixtures ", 9)) {
             terminal_submit(JOB_FIXTURES, NULL, NULL, atoi(line + 9));
         } else if (!strcmp(line, "ui")) {
@@ -138,7 +146,7 @@ static void task(void *arg) {
             terminal_submit(JOB_MUSIC_TOGGLE, NULL, NULL, -1);
         } else if (!strncmp(line, "page ", 5)) {
             int p = atoi(line + 5);
-            if ((p >= 0 && p <= 18) || p == 21) {
+            if ((p >= 0 && p <= 18) || p == 21 || p == 22) {
                 lvgl_port_lock(0);
                 shell_open(p);
                 lvgl_port_unlock();

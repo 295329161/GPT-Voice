@@ -9,6 +9,7 @@
 #include "esp_aec.h"
 #include "esp_crt_bundle.h"
 #include "esp_heap_caps.h"
+#include "services/usb_transfer.h"
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "esp_wifi.h"
@@ -839,6 +840,10 @@ void voice_stop(void) {
     xSemaphoreGive(capture_mutex);
 }
 void voice_start(void) {
+    if (usb_transfer_busy()) {
+        status("请先结束 USB 传输");
+        return;
+    }
     if (!desired)
         return;
     if (running)
@@ -921,6 +926,11 @@ void voice_start(void) {
 }
 
 void voice_request(bool enable) {
+    if (enable && usb_transfer_busy()) {
+        enable = false;
+        terminal_notice("请先结束 USB 传输");
+        status("USB 传输期间暂停语音");
+    }
     desired = enable;
     if (!enable) {
         running = false;

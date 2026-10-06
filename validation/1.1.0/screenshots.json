@@ -1,0 +1,57 @@
+[
+  {
+    "file": "screenshots/01-menu-2.png",
+    "title": "菜单位置与原创图标",
+    "sha256": "d38f2f2645d4c1fa6d73b1334083eec023bd6731da6e287ad30d41038768aed0"
+  },
+  {
+    "file": "screenshots/22-usb-idle.png",
+    "title": "USB 页面",
+    "sha256": "cc9aaf4ddc247fd8f2698d6036ddde5ec084036abe464db18849c17d56ecf28b"
+  },
+  {
+    "file": "screenshots/22-usb-confirm.png",
+    "title": "开启前确认",
+    "sha256": "f135e230d8e4b04601b314440c67aa18f83680d13474ff95d6b44d2b7b3c546b"
+  },
+  {
+    "file": "screenshots/22-usb-waiting.png",
+    "title": "等待电脑 · 软件断开测试",
+    "sha256": "96d523407a394ebfa2df08b83a701a824e03cbfa0be15607e54cdd499feca775"
+  },
+  {
+    "file": "screenshots/22-usb-timeout.png",
+    "title": "60 秒自动返回",
+    "sha256": "c0b08341afb612591c1ec8d02dd146956a5e40edf0b55616beca42f4cae7ad88"
+  },
+  {
+    "file": "screenshots/22-usb-connected.png",
+    "title": "电脑连接与统计",
+    "sha256": "e4997b670db5ac548752ceea7502419cd2f55d79e93d70aec13f0db81b2d1b32"
+  },
+  {
+    "file": "screenshots/22-usb-writing.png",
+    "title": "写入状态",
+    "sha256": "63ef51d8ddb08e3a34666e02fb347c7c23abc17aa1c4fbf6ae118ff7c4c2031b"
+  },
+  {
+    "file": "screenshots/22-usb-ejected.png",
+    "title": "安全弹出后恢复",
+    "sha256": "40edf02b1717da306c195cee92399be8756fdcbbe760af6aac9279e333228369"
+  },
+  {
+    "file": "screenshots/03-usb-music.png",
+    "title": "新拷入音乐播放",
+    "sha256": "8f2cc7f3543edec5a2010715f7b80f65ee1be96d8575177523de6ead21272f8e"
+  },
+  {
+    "file": "screenshots/20-usb-image.png",
+    "title": "新拷入 PNG 显示",
+    "sha256": "999f915f79d37160fc5a4fa57a1bdf5c6da7a83c0f6c5df75351e8455d36b949"
+  },
+  {
+    "file": "screenshots/06-voice-after-usb.png",
+    "title": "退出 USB 后语音查询",
+    "sha256": "78b05a474460f4a26ac93bb1f32d1e148ce294573554b4fd87eb375b0f2e20c9"
+  }
+]

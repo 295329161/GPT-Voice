@@ -1,10 +1,11 @@
-# GPT Voice 1.0.0
+# GPT Voice 1.1.0
 
 立创实战派 ESP32-S3 V1.0.1 桌面终端，16 MB Flash / 8 MB PSRAM，320×240 横屏。基于 PlatformIO、ESP-IDF 5.5、LVGL 8.3。
 
 ## 使用
 
-- 开机显示真实时间与天气，左右滑动进入应用菜单。每页四个图标，第一页为 GPT Voice、音乐、游戏、图片，第二页为设置、文件管理及 Home Assistant 预留入口。左箭头逐级返回，主页按钮回到看板。
+- 开机显示真实时间与天气，左右滑动进入应用菜单。每页四个图标，第一页为 GPT Voice、音乐、游戏、图片，第二页为设置、文件管理、USB 传文件及 Home Assistant 预留入口。左箭头逐级返回，主页按钮回到看板。
+- USB 传文件使用标准 U 盘协议访问 SD 卡。开启前确认停止音乐和语音，本机暂停 SD 文件访问；60 秒未连接电脑自动返回，已连接时在电脑安全弹出后恢复普通模式。详情见 [USB 使用说明](docs/USB_TRANSFER.md)。
 - BOOT 单击关闭或打开背光，长按只切换一次。开机默认亮屏，恢复使用保存的亮度。熄屏期间音乐、语音和网络继续运行；复位键保持复位功能。
 - 设置中连接 Wi-Fi、调整亮度/音量/体感灵敏度、设置天气城市、开启网页配置。配置保存到 NVS。当前 Wi-Fi 的密码输入框留空可使用已保存密码重新连接。
 - 联网后 SNTP 校准北京时间，之后每 24 小时同步；Open-Meteo 天气每 15 分钟刷新，断网保留本次开机已有缓存。天气效果预览可切换晴、云、雨、雪及昼夜，预览数据不写入真实天气。
@@ -34,7 +35,7 @@ python3 scripts/device_console.py artifacts/device-session
 
 依赖 PlatformIO 6.x（常见安装位置 `~/.platformio/penv`）、主机 C/C++ 编译器和 Python 3；截图脚本还需要 Pillow。`platformio.ini` 与 `dependencies.lock` 固定平台及组件版本。`PLATFORMIO_CORE_DIR` 可指定其他 PlatformIO 目录。
 
-构建脚本处理项目路径中的空格，产物在 `.pio/build/szp_s3/`，临时日志在 `artifacts/`。原机使用原生 USB JTAG 接口烧录、CH340 接口查看日志；串口路径在 `platformio.ini` 和脚本中可调整。串口工具支持 `status`、`ui`、`page N`、`tap X Y`、`swipe X Y X2 Y2`，`:shot name` 保存 PNG，`:quit` 退出且不复位设备。不要同时打开多个串口读者。
+构建脚本处理项目路径中的空格，产物在 `.pio/build/szp_s3/`，临时日志在 `artifacts/`。`flash-usb` 优先使用原生 USB，缺失时回退独立 CH340；`flash` 直接使用 CH340。USB 传输仍开启时脚本拒绝复位烧录，请先安全弹出。串口路径在 `platformio.ini` 和脚本中可调整。串口工具支持 `status`、`ui`、`page N`、`tap X Y`、`swipe X Y X2 Y2`，`:shot name` 保存 PNG，`:quit` 退出且不复位设备。不要同时打开多个串口读者。
 
 发布包附有分区表、bootloader、应用固件和校验清单。相同分区布局升级不擦除 NVS，保留 Wi-Fi/API 配置；不要执行 `erase_flash`。该分区布局不适用于其他板型。
 
@@ -42,6 +43,7 @@ python3 scripts/device_console.py artifacts/device-session
 
 - [版本说明](docs/RELEASE.md)、[本次验证及边界](docs/VALIDATION.md)
 - [全部页面截图](validation/1.0.0/index.html)
+- [USB 功能验证](docs/VALIDATION_USB.md)、[新增界面截图](validation/1.1.0/index.html)
 - [架构与扩展](docs/ARCHITECTURE.md)、[语音维护要求](docs/VOICE_BASELINE.md)
 - [硬件诊断与复测](docs/TESTING.md)
 

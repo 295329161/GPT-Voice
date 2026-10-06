@@ -8,6 +8,31 @@ import subprocess
 import sys
 import tempfile
 
+NATIVE_PORT = Path('/dev/serial/by-id/usb-Espressif_USB_JTAG_serial_debug_unit_CC:BA:97:0A:4E:5C-if00')
+UART_PORT = Path('/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0')
+
+
+def usb_storage_active(sysfs=Path('/sys/bus/usb/devices')):
+    """Do not reset a card that may still be mounted by the computer."""
+    for device in sysfs.iterdir():
+        try:
+            if (device / 'idVendor').read_text().strip() == '303a' and \
+               (device / 'idProduct').read_text().strip() == '4002' and \
+               (device / 'serial').read_text().strip() == 'CCBA970A4E5C':
+                return True
+        except (FileNotFoundError, NotADirectoryError):
+            continue
+    return False
+
+
+def native_or_uart(native=NATIVE_PORT, uart=UART_PORT):
+    if native.exists():
+        return native
+    if uart.exists():
+        print('Native USB unavailable; using the independent CH340 upload port.', flush=True)
+        return uart
+    raise RuntimeError('Device not connected: neither native USB nor CH340 is available')
+
 
 def stage_project(root):
     suffix = hashlib.sha256(str(root).encode()).hexdigest()[:12]
@@ -28,12 +53,14 @@ def stage_project(root):
     # and newly added local overrides also require CMake dependency resolution.
     cmake_inputs = hashlib.sha256()
     for source in sorted(sources):
-        if source.name in ("CMakeLists.txt", "idf_component.yml", "Kconfig", "Kconfig.projbuild"):
+        if source.name in ("CMakeLists.txt", "idf_component.yml", "Kconfig", "Kconfig.projbuild", "dependencies.lock"):
             cmake_inputs.update(str(source.relative_to(root)).encode())
             cmake_inputs.update(source.read_bytes())
     stamp = stage / ".cmake-inputs.sha256"
     signature = cmake_inputs.hexdigest()
-    if not stamp.exists() or stamp.read_text() != signature:
+    source_lock, staged_lock = root / 'dependencies.lock', stage / 'dependencies.lock'
+    lock_changed = source_lock.exists() and staged_lock.exists() and source_lock.read_bytes() != staged_lock.read_bytes()
+    if not stamp.exists() or stamp.read_text() != signature or lock_changed:
         cache = stage / ".pio/build/szp_s3/CMakeCache.txt"
         if cache.exists():
             cache.unlink()
@@ -64,6 +91,9 @@ def main():
     root = Path(__file__).resolve().parents[1]
     pio = Path(sys.executable).parent / "pio"
     action = sys.argv[1] if len(sys.argv) > 1 else "build"
+    if action in ('flash', 'flash-usb', 'debug') and usb_storage_active():
+        print('USB 传输仍在开启。请先在电脑上安全弹出 SD 卡，待设备恢复普通模式后再烧录/调试。', file=sys.stderr)
+        return 2
     if action == "monitor":
         # The generic pyserial monitor changes modem lines during open. This
         # board wires them to BOOT/RESET, so use the control-line-safe console.
@@ -78,7 +108,7 @@ def main():
         if action != "build":
             command += ["-t", "upload"]
         if action == "flash-usb":
-            command += ["--upload-port", "/dev/serial/by-id/usb-Espressif_USB_JTAG_serial_debug_unit_CC:BA:97:0A:4E:5C-if00"]
+            command += ["--upload-port", str(native_or_uart())]
     elif action == "monitor":
         command += ["device", "monitor", "-e", "szp_s3"]
     elif action == "debug":
@@ -122,4 +152,3 @@ def main():
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

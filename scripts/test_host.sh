@@ -3,6 +3,8 @@ set -euo pipefail
 export UBSAN_OPTIONS=halt_on_error=1
 cd "$(dirname "$0")/.."
 mkdir -p artifacts/tests
+cc -std=c11 -Wall -Wextra -Werror -fsanitize=address,undefined -I src tests/usb_disk_test.c src/core/usb_disk.c -o artifacts/tests/usb_disk
+artifacts/tests/usb_disk
 cc -std=c11 -Wall -Wextra -Werror -fsanitize=address,undefined -I src tests/image_info_test.c src/core/image_info.c -o artifacts/tests/image_info
 artifacts/tests/image_info
 cc -std=c11 -Wall -Wextra -Werror -fsanitize=address,undefined -I src tests/button_test.c src/core/button.c -o artifacts/tests/button

@@ -8,6 +8,17 @@ spec=importlib.util.spec_from_file_location('pio_run',Path(__file__).resolve().p
 module=importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
 class StageTests(unittest.TestCase):
+ def test_usb_transfer_blocks_reset_and_uart_remains_available(self):
+  with tempfile.TemporaryDirectory() as tmp:
+   root=Path(tmp);device=root/'1-10.3';device.mkdir()
+   (device/'idVendor').write_text('303a\n');(device/'idProduct').write_text('4002\n')
+   (device/'serial').write_text('CCBA970A4E5C\n')
+   self.assertTrue(module.usb_storage_active(root))
+   (device/'idProduct').write_text('1001\n')
+   self.assertFalse(module.usb_storage_active(root))
+   native=root/'native';uart=root/'uart';uart.touch()
+   self.assertEqual(module.native_or_uart(native,uart),uart)
+   native.touch();self.assertEqual(module.native_or_uart(native,uart),native)
  def test_component_manifest_invalidates_cmake_cache(self):
   with tempfile.TemporaryDirectory() as tmp:
    root=Path(tmp)/'project with spaces';root.mkdir();(root/'src').mkdir()
@@ -19,4 +30,9 @@ class StageTests(unittest.TestCase):
     manifest.write_text('dependencies:\n  new/component: "1.0"')
     module.stage_project(root);self.assertFalse(cache.exists(),'manifest changes must re-resolve components')
     self.assertEqual((stage/'src/idf_component.yml').read_text(),manifest.read_text())
+    lock=root/'dependencies.lock';lock.write_text('resolved baseline')
+    module.stage_project(root);cache.write_text('cache')
+    (stage/'dependencies.lock').write_text('resolved after failed build')
+    module.stage_project(root)
+    self.assertFalse(cache.exists(),'replacing a resolver lock must invalidate CMake too')
 if __name__=='__main__':unittest.main()

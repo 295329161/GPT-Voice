@@ -1,0 +1,134 @@
+
+=== timeout-tests.log ===
+STATUS online=1 time=1 sd=1 imu=1 audio=1 voice=0 heap=7465012 internal=61887 tasks=24
+BACKLIGHT on=1 brightness=77 duty=787 boot_level=1
+USB phase=0 busy=0 host=0 suspended=0 wait=0 read=0 written=0
+STATUS online=1 time=1 sd=0 imu=1 audio=1 voice=0 heap=7492676 internal=57055 tasks=25
+BACKLIGHT on=1 brightness=77 duty=787 boot_level=1
+USB phase=2 busy=1 host=0 suspended=0 wait=59 read=0 written=0
+STATUS online=1 time=1 sd=0 imu=1 audio=1 voice=0 heap=7493352 internal=57055 tasks=25
+BACKLIGHT on=1 brightness=77 duty=787 boot_level=1
+USB phase=2 busy=1 host=0 suspended=0 wait=48 read=0 written=0
+STATUS online=1 time=1 sd=0 imu=1 audio=1 voice=0 heap=7493352 internal=57055 tasks=25
+BACKLIGHT on=1 brightness=77 duty=787 boot_level=1
+USB phase=2 busy=1 host=0 suspended=0 wait=43 read=0 written=0
+STATUS online=1 time=1 sd=0 imu=1 audio=1 voice=0 heap=7492036 internal=57055 tasks=25
+BACKLIGHT on=1 brightness=77 duty=787 boot_level=1
+USB phase=2 busy=1 host=0 suspended=0 wait=38 read=0 written=0
+STATUS online=1 time=1 sd=0 imu=1 audio=1 voice=0 heap=7493352 internal=57055 tasks=25
+BACKLIGHT on=1 brightness=77 duty=787 boot_level=1
+USB phase=2 busy=1 host=0 suspended=0 wait=33 read=0 written=0
+STATUS online=1 time=1 sd=0 imu=1 audio=1 voice=0 heap=7493352 internal=57055 tasks=25
+BACKLIGHT on=1 brightness=77 duty=787 boot_level=1
+USB phase=2 busy=1 host=0 suspended=0 wait=27 read=0 written=0
+STATUS online=1 time=1 sd=0 imu=1 audio=1 voice=0 heap=7492648 internal=57055 tasks=25
+BACKLIGHT on=1 brightness=77 duty=787 boot_level=1
+USB phase=2 busy=1 host=0 suspended=0 wait=22 read=0 written=0
+STATUS online=1 time=1 sd=0 imu=1 audio=1 voice=0 heap=7493352 internal=57055 tasks=25
+BACKLIGHT on=1 brightness=77 duty=787 boot_level=1
+USB phase=2 busy=1 host=0 suspended=0 wait=17 read=0 written=0
+STATUS online=1 time=1 sd=0 imu=1 audio=1 voice=0 heap=7493352 internal=57055 tasks=25
+BACKLIGHT on=1 brightness=77 duty=787 boot_level=1
+USB phase=2 busy=1 host=0 suspended=0 wait=12 read=0 written=0
+STATUS online=1 time=1 sd=0 imu=1 audio=1 voice=0 heap=7492648 internal=57055 tasks=25
+BACKLIGHT on=1 brightness=77 duty=787 boot_level=1
+USB phase=2 busy=1 host=0 suspended=0 wait=7 read=0 written=0
+STATUS online=1 time=1 sd=0 imu=1 audio=1 voice=0 heap=7493352 internal=57055 tasks=25
+BACKLIGHT on=1 brightness=77 duty=787 boot_level=1
+USB phase=2 busy=1 host=0 suspended=0 wait=1 read=0 written=0
+I (111629) usb_transfer: normal mode reason=2 sd=1
+STATUS online=1 time=1 sd=1 imu=1 audio=1 voice=0 heap=7464196 internal=61771 tasks=24
+BACKLIGHT on=1 brightness=77 duty=787 boot_level=1
+USB phase=0 busy=0 host=0 suspended=0 wait=0 read=0 written=0
+STATUS online=1 time=1 sd=1 imu=1 audio=1 voice=0 heap=7464196 internal=61771 tasks=24
+BACKLIGHT on=1 brightness=77 duty=787 boot_level=1
+USB phase=0 busy=0 host=0 suspended=0 wait=0 read=0 written=0
+I (123899) usb_transfer: normal mode reason=1 sd=1
+STATUS online=1 time=1 sd=1 imu=1 audio=1 voice=0 heap=7464244 internal=61795 tasks=24
+BACKLIGHT on=1 brightness=77 duty=787 boot_level=1
+USB phase=0 busy=0 host=0 suspended=0 wait=0 read=0 written=0
+STATUS online=1 time=1 sd=0 imu=1 audio=1 voice=0 heap=7493748 internal=57443 tasks=25
+BACKLIGHT on=1 brightness=77 duty=787 boot_level=1
+USB phase=3 busy=1 host=1 suspended=0 wait=0 read=473088 written=0
+
+=== regression.log ===
+STATUS online=1 time=1 sd=0 imu=1 audio=1 voice=0 heap=7493004 internal=57407 tasks=25
+BACKLIGHT on=1 brightness=77 duty=787 boot_level=1
+USB phase=3 busy=1 host=1 suspended=0 wait=0 read=11878400 written=512
+STATUS online=1 time=1 sd=0 imu=1 audio=1 voice=0 heap=7493532 internal=57407 tasks=25
+BACKLIGHT on=1 brightness=77 duty=787 boot_level=1
+USB phase=3 busy=1 host=1 suspended=0 wait=0 read=17131008 written=4096
+I (239769) usb_transfer: normal mode reason=3 sd=1
+STATUS online=1 time=1 sd=1 imu=1 audio=1 voice=0 heap=7464412 internal=62143 tasks=24
+BACKLIGHT on=1 brightness=77 duty=787 boot_level=1
+USB phase=0 busy=0 host=1 suspended=0 wait=0 read=18224640 written=6144
+AUDIO_PROBE amp=1 pin=1 playing=1 volume=65 mean_abs=589/114/114 peak=9084/1479/990
+STATUS online=1 time=1 sd=1 imu=1 audio=1 voice=1 heap=7298284 internal=13879 tasks=25
+BACKLIGHT on=1 brightness=77 duty=787 boot_level=1
+USB phase=0 busy=0 host=1 suspended=0 wait=0 read=18224640 written=6144
+I (286329) voice: test output 今天是2026年10月7日，星期三。
+I (289359) voice: test response status=completed reason= error= message= output=1
+I (299559) search: rpc=initialize http=200 bytes=193 result=ESP_OK
+I (300759) search: rpc=notifications/initialized http=202 bytes=0 result=ESP_OK
+I (304429) search: rpc=tools/call http=200 bytes=26913 result=ESP_OK
+I (306159) voice: test output 今天没有查到新新闻。
+I (307879) voice: test response status=completed reason= error= message= output=1
+STATUS online=1 time=1 sd=1 imu=1 audio=1 voice=1 heap=7299256 internal=15151 tasks=25
+BACKLIGHT on=1 brightness=77 duty=787 boot_level=1
+USB phase=0 busy=0 host=1 suspended=0 wait=0 read=18224640 written=6144
+I (338529) search: rpc=initialize http=200 bytes=193 result=ESP_OK
+I (339659) search: rpc=notifications/initialized http=202 bytes=0 result=ESP_OK
+I (343559) search: rpc=tools/call http=200 bytes=39310 result=ESP_OK
+I (346259) voice: test output 1. 英伟达押注者纬创营收飙升，服务器业务占七成。
+I (354079) voice: test response status=completed reason= error= message= output=1
+STATUS online=1 time=1 sd=1 imu=1 audio=1 voice=1 heap=7298144 internal=14531 tasks=25
+BACKLIGHT on=1 brightness=77 duty=787 boot_level=1
+USB phase=0 busy=0 host=1 suspended=0 wait=0 read=18224640 written=6144
+STATUS online=1 time=1 sd=1 imu=1 audio=1 voice=1 heap=7306540 internal=20771 tasks=25
+BACKLIGHT on=1 brightness=77 duty=787 boot_level=1
+USB phase=0 busy=0 host=1 suspended=0 wait=0 read=18224640 written=6144
+STATUS online=1 time=1 sd=1 imu=1 audio=1 voice=0 heap=7462328 internal=59995 tasks=24
+BACKLIGHT on=0 brightness=77 duty=0 boot_level=1
+USB phase=0 busy=0 host=1 suspended=0 wait=0 read=18224640 written=6144
+AUDIO_PROBE amp=0 pin=0 playing=0 volume=65 mean_abs=50/53/53 peak=289/183/185
+STATUS online=1 time=1 sd=1 imu=1 audio=1 voice=0 heap=7462328 internal=59995 tasks=24
+BACKLIGHT on=1 brightness=77 duty=787 boot_level=1
+USB phase=0 busy=0 host=1 suspended=0 wait=0 read=18224640 written=6144
+STATUS online=1 time=1 sd=1 imu=1 audio=1 voice=0 heap=7463384 internal=60839 tasks=24
+BACKLIGHT on=1 brightness=77 duty=787 boot_level=1
+AUDIO_PROBE amp=1 pin=1 playing=1 volume=65 mean_abs=10096/230/109 peak=32768/2138/1162
+USB phase=0 busy=0 host=1 suspended=0 wait=0 read=18224640 written=6144
+
+=== repeat-cleanup.log ===
+STATUS online=1 time=1 sd=0 imu=1 audio=1 voice=0 heap=7493364 internal=56787 tasks=25
+BACKLIGHT on=1 brightness=77 duty=787 boot_level=1
+USB phase=3 busy=1 host=1 suspended=0 wait=0 read=3036160 written=512
+I (626329) usb_transfer: normal mode reason=3 sd=1
+STATUS online=1 time=1 sd=1 imu=1 audio=1 voice=0 heap=7464228 internal=61507 tasks=24
+BACKLIGHT on=1 brightness=77 duty=787 boot_level=1
+USB phase=0 busy=0 host=1 suspended=0 wait=0 read=4166656 written=603648
+STATUS online=1 time=1 sd=0 imu=1 audio=1 voice=0 heap=7492680 internal=56779 tasks=25
+BACKLIGHT on=1 brightness=77 duty=787 boot_level=1
+USB phase=3 busy=1 host=1 suspended=0 wait=0 read=2295296 written=512
+I (643739) usb_transfer: normal mode reason=3 sd=1
+STATUS online=1 time=1 sd=1 imu=1 audio=1 voice=0 heap=7464228 internal=61507 tasks=24
+BACKLIGHT on=1 brightness=77 duty=787 boot_level=1
+USB phase=0 busy=0 host=1 suspended=0 wait=0 read=4146176 written=1024
+STATUS online=1 time=1 sd=0 imu=1 audio=1 voice=0 heap=7493356 internal=56779 tasks=25
+BACKLIGHT on=1 brightness=77 duty=787 boot_level=1
+USB phase=3 busy=1 host=1 suspended=0 wait=0 read=1975808 written=512
+I (661149) usb_transfer: normal mode reason=3 sd=1
+STATUS online=1 time=1 sd=1 imu=1 audio=1 voice=0 heap=7464228 internal=61507 tasks=24
+BACKLIGHT on=1 brightness=77 duty=787 boot_level=1
+USB phase=0 busy=0 host=1 suspended=0 wait=0 read=4137984 written=1024
+
+=== Final flashed device ===
+STATUS online=1 time=1 sd=1 imu=1 audio=1 voice=0 heap=7463664 internal=62123 tasks=24
+BACKLIGHT on=1 brightness=77 duty=787 boot_level=1
+USB phase=0 busy=0 host=0 suspended=0 wait=0 read=0 written=0
+FILE DIR 0 System Volume Information
+FILE FILE 36 DEMO_47321.txt
+FILE FILE 88064 REC_236516.wav
+FILE FILE 320044 REC_56346.wav
+FILE FILE 4715611 生如夏花.mp3
+PAGE active=0 dialog=0

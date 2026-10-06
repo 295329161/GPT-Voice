@@ -7,9 +7,12 @@
 - `core/terminal`：配置 NVS、状态锁、有界后台操作队列。UI 读取快照，所有慢操作通过作业队列提交。
 - `core/resampler`：24/16 kHz 双向流式 FIR 重采样；保留跨块历史，避免音频块边界断裂。
 - `core/path`：SD 根目录边界和 FAT 文件名校验。
+- `core/usb_disk`：USB 扇区读写边界检查、跨扇区部分写保留相邻数据，以及可回绕的 60 秒初始连接计时。
 - `core/conversation`：按用户 item ID 与回答 response ID 保存最近 8 轮对话，用户转写与助手流式文字分别更新，再按“你／助手”顺序呈现；避免异步事件到达顺序颠倒角色。
 - `services/network`：Wi-Fi、SNTP、天气、短期开启的网页配置和信息查询。Open-Meteo 查询无需密钥；Tavily 为可选备用搜索供应商。
 - `services/storage`：挂载、目录快照、文件操作；有占用的音乐文件禁止修改。不格式化用户 SD 卡，不覆盖已有改名目标。
+- `services/usb_transfer`：TinyUSB 0.19.0~3 MSC 与 SD 独占交接。先停止语音/音乐、卸载本机 FAT VFS，再开启原始 SD 扇区访问；弹出响应发送完毕后停止 USB，释放 SD host 并重新挂载。USB 任务及 DMA 暂存仅在传输时分配，固定协议缓冲为 512 字节。中断分配和释放均在核 0。释放 SD 时使用实际槽位的 deinit，避免全局 deinit 误复位未使用槽位中的 GPIO0。
+- `apps/usb_transfer_view`：原创 LVGL USB 图标、深色状态卡、传输计数和开启前确认。确认框随页面销毁；取消不启动后台切换。读写失败保留电脑独占并显示提示，不擅自挂载本机文件系统。
 - `services/media`：MP3/WAV 文件流解码、播放状态、音频采样率管理；语音抢占时暂停，返回后手动恢复。
 - `services/tools`：语音工具注册表、参数校验与执行分发；注册 `get_time`、`get_weather`、`web_search` 和 `external_web_search`（仅在提供 Tavily Key 后向模型公布）；无参数工具将 parameter 设为 NULL。时间工具读取 SNTP 校准时钟，未校时返回错误。
 - `services/voice`：StepAudio WebSocket 事件与分片、会话配置、AEC、采集、播放、工具任务。Step Plan 会话通过 `services/step_search` 调用官方搜索 MCP，明确查询在本机转写后派发；检索完成后才触发回答，其他端点保留原生搜索。所有队列和网络消息均有上限。

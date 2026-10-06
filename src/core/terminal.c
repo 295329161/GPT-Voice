@@ -1,4 +1,5 @@
 #include "terminal.h"
+#include "services/usb_transfer.h"
 #include "esp32_s3_szp.h"
 #include "esp_attr.h"
 #include "esp_heap_caps.h"
@@ -111,6 +112,7 @@ bool terminal_submit(job_kind_t kind, const char *a, const char *b, int value) {
 static void worker(void *arg) {
     terminal_job_t j;
     for (;;) {
+        usb_transfer_poll();
         voice_poll();
         if (xQueueReceive(jobs, &j, pdMS_TO_TICKS(100)) != pdTRUE)
             continue;
