@@ -1,4 +1,5 @@
 #include "shell.h"
+#include "weather_view.h"
 #include "core/terminal.h"
 #include "esp32_s3_szp.h"
 #include "esp_heap_caps.h"
@@ -24,8 +25,8 @@ enum {
     WEATHER,
     WEB,
     ABOUT,
-    MAZE,
-    DODGE,
+    SHOOTER,
+    TILES,
     FLOOD,
     FILE_DETAIL,
     IMAGE_VIEW
@@ -86,7 +87,7 @@ static const terminal_app_t *find_app(int id) {
     return NULL;
 }
 static lv_obj_t *screen, *content, *notice, *heading, *info, *list, *edit_a, *edit_b, *keyboard,
-    *clock_label, *weather_label, *connection_label, *picture, *weather_icon;
+    *picture;
 LV_FONT_DECLARE(terminal_cjk);
 static lv_font_t font;
 static int active = HOME, pending = -1, menu_page;
@@ -145,9 +146,12 @@ static void gesture(lv_event_t *e) {
     if ((active == HOME) && (dir == LV_DIR_LEFT || dir == LV_DIR_RIGHT))
         shell_open(MENU);
     else if (active == MENU && (dir == LV_DIR_LEFT || dir == LV_DIR_RIGHT)) {
-        menu_page = (menu_page + 1) % ((registry_count + 5) / 6);
+        int pages=(registry_count+5)/6;
+        menu_page=(menu_page+(dir==LV_DIR_LEFT?1:pages-1))%pages;
         shell_open(MENU);
     }
+    if ((active==HOME||active==MENU) && (dir==LV_DIR_LEFT||dir==LV_DIR_RIGHT))
+        lv_indev_wait_release(lv_indev_get_act());
 }
 static void keyboard_done(lv_event_t *e) {
     lv_obj_add_flag(keyboard, LV_OBJ_FLAG_HIDDEN);
@@ -181,15 +185,13 @@ static lv_obj_t *decoration(lv_obj_t *parent, int x, int y, int w, int h, uint32
     return o;
 }
 static void home_page(void) {
-    decoration(content, 0, 0, 294, 74, 0x1b293c, 12);
-    decoration(content, 0, 82, 294, 78, 0x17313c, 12);
-    clock_label = ui_label(content, "--:--:--", 14, 9, 265);
-    lv_obj_set_style_text_font(clock_label, &lv_font_montserrat_24, 0);
-    connection_label = ui_label(content, "时间未同步", 14, 45, 265);
-    weather_label = ui_label(content, "请选择天气城市", 12, 91, 252);
-    weather_icon = decoration(content, 261, 95, 22, 22, 0xf4bd54, 11);
-    ui_label(content, "左右滑动，打开应用", 48, 165, 246);
-    lv_obj_add_event_cb(content, gesture, LV_EVENT_GESTURE, NULL);
+    weather_view_create(content);
+}
+// Fixed pages must not enter LVGL's scrolling state, which suppresses gestures.
+static void gesture_tree(lv_obj_t *o) {
+    lv_obj_clear_flag(o, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(o, LV_OBJ_FLAG_GESTURE_BUBBLE);
+    for (unsigned i=0;i<lv_obj_get_child_cnt(o);i++) gesture_tree(lv_obj_get_child(o,i));
 }
 static void menu_more(lv_event_t *e) {
     menu_page = (menu_page + 1) % ((registry_count + 5) / 6);
@@ -211,10 +213,11 @@ static void menu_create(void) {
         if (i == 6)
             lv_obj_set_style_text_font(name, &lv_font_montserrat_14, 0);
     }
-    char pages[40];
-    snprintf(pages, sizeof(pages), "第 %d / %d 页  >", menu_page + 1, (registry_count + 5) / 6);
-    ui_button(content, pages, 66, 155, 170, menu_more, NULL);
-    lv_obj_add_event_cb(content, gesture, LV_EVENT_GESTURE, NULL);
+    int pages=(registry_count+5)/6;
+    lv_obj_t *pager=ui_button(content,"",100,155,100,menu_more,NULL);
+    lv_obj_set_style_bg_opa(pager,0,0);
+    lv_obj_set_style_pad_all(pager,0,0);
+    for(int i=0;i<pages;i++) decoration(pager,40+(i-pages/2)*16,12,i==menu_page?16:6,6,i==menu_page?0xc7e7ff:0x506780,3);
 }
 static void settings_page(void) {
     const char *names[] = {"显示亮度", "声音音量",       "Wi-Fi 连接", "蓝牙扫描与配对",
@@ -317,8 +320,8 @@ static void music_page(void) {
     ui_button(content, "音量", 150, 143, 142, navigate, (void *)SOUND);
 }
 static void games_page(void) {
-    ui_button(content, "重力迷宫", 0, 4, 294, navigate, (void *)MAZE);
-    ui_button(content, "倾斜躲避", 0, 47, 294, navigate, (void *)DODGE);
+    ui_button(content, "雷电突击", 0, 4, 294, navigate, (void *)SHOOTER);
+    ui_button(content, "羊了个羊", 0, 47, 294, navigate, (void *)TILES);
     ui_button(content, "Color Flood", 0, 90, 294, navigate, (void *)FLOOD);
     ui_label(content, "体感灵敏度", 0, 141, 115);
     lv_obj_t *s = lv_slider_create(content);
@@ -558,15 +561,17 @@ static void render(int page) {
     dialog = false;
     active = page;
     lv_obj_clean(screen);
-    info = list = clock_label = weather_label = connection_label = picture = NULL;
+    info = list = picture = NULL;
     heading = ui_label(screen, "", 57, 7, 205);
-    ui_button(screen, page == HOME ? LV_SYMBOL_LIST : LV_SYMBOL_LEFT, 5, 3, 43,
-              page == HOME ? navigate : back, (void *)MENU);
-    ui_button(screen, LV_SYMBOL_HOME, 276, 3, 39, navigate, (void *)HOME);
+    if(page!=HOME){
+        ui_button(screen, LV_SYMBOL_LEFT, 5, 3, 43, back, (void *)MENU);
+        ui_button(screen, LV_SYMBOL_HOME, 276, 3, 39, navigate, (void *)HOME);
+    }
     content = lv_obj_create(screen);
     lv_obj_remove_style_all(content);
     lv_obj_set_pos(content, 9, 40);
     lv_obj_set_size(content, 302, 190);
+    if(page==HOME){lv_obj_set_pos(content,0,0);lv_obj_set_size(content,320,240);}
     lv_obj_set_scroll_dir(content, LV_DIR_VER);
     lv_obj_set_style_text_font(content, &font, 0);
     lv_obj_set_style_text_color(content, lv_color_hex(0xe6edf7), 0);
@@ -576,6 +581,7 @@ static void render(int page) {
     lv_obj_set_style_text_color(notice, lv_color_hex(0xa7bed8), 0);
     lv_label_set_long_mode(notice, LV_LABEL_LONG_DOT);
     lv_obj_set_height(notice, 18);
+    if(page==HOME||page==MENU||page==SHOOTER||page==TILES||page==FLOOD)lv_obj_add_flag(notice,LV_OBJ_FLAG_HIDDEN);
     keyboard = lv_keyboard_create(screen);
     lv_obj_set_size(keyboard, 320, 125);
     lv_obj_align(keyboard, LV_ALIGN_BOTTOM_MID, 0, 0);
@@ -628,12 +634,12 @@ static void render(int page) {
         title = "设备信息";
         info = ui_label(content, "", 0, 8, 294);
         break;
-    case MAZE:
-        title = "重力迷宫";
+    case SHOOTER:
+        title = "雷电突击";
         games_create(content, 0);
         break;
-    case DODGE:
-        title = "倾斜躲避";
+    case TILES:
+        title = "羊了个羊";
         games_create(content, 1);
         break;
     case FLOOD:
@@ -651,23 +657,8 @@ static void render(int page) {
     }
 ready:
     lv_label_set_text(heading, title);
-}
-static const char *weather_name(int code) {
-    if (code == 0)
-        return "晴";
-    if (code <= 3)
-        return "多云";
-    if (code <= 48)
-        return "雾";
-    if (code <= 67)
-        return "雨";
-    if (code <= 77)
-        return "雪";
-    if (code <= 82)
-        return "阵雨";
-    if (code <= 86)
-        return "阵雪";
-    return "雷雨";
+    if(page==HOME){lv_obj_add_flag(heading,LV_OBJ_FLAG_HIDDEN);weather_view_update(snapshot);}
+    if(page==HOME||page==MENU)gesture_tree(content);
 }
 static void tick(lv_timer_t *timer) {
     state_lock();
@@ -682,35 +673,7 @@ static void tick(lv_timer_t *timer) {
     lv_label_set_text(notice, active == HOME ? "天气数据 Open-Meteo" : snapshot->notice);
     if (dialog)
         return;
-    if (active == HOME) {
-        time_t now = time(NULL);
-        struct tm tm;
-        localtime_r(&now, &tm);
-        if (snapshot->time_valid) {
-            strftime(text, sizeof(text), "%H:%M:%S", &tm);
-            lv_label_set_text(clock_label, text);
-            strftime(text, sizeof(text), "%Y-%m-%d", &tm);
-        } else
-            strcpy(text, "时间未同步");
-        strcat(text, snapshot->online ? "   Wi-Fi 已连接" : "   离线");
-        lv_label_set_text(connection_label, text);
-        if (snapshot->weather_valid) {
-            snprintf(
-                text, sizeof(text), "%s  %s  %.0f°C\n体感 %.0f°  最低 %.0f° / 最高 %.0f°\n%s%s",
-                snapshot->weather_city, weather_name(snapshot->weather_code), snapshot->temperature,
-                snapshot->feels, snapshot->low, snapshot->high, snapshot->weather_time,
-                (snapshot->weather_error[0] || !snapshot->online) ? " 缓存" : "");
-        } else
-            snprintf(text, sizeof(text), "%s",
-                     config.location_set ? "正在获取天气…"
-                                         : "设置 / 天气城市\n选择当地城市以显示天气");
-        lv_label_set_text(weather_label, text);
-        lv_obj_set_style_bg_color(weather_icon,
-                                  lv_color_hex(snapshot->weather_code == 0   ? 0xf4bd54
-                                               : snapshot->weather_code <= 3 ? 0xadc5dc
-                                                                             : 0x64b5ed),
-                                  0);
-    }
+    if (active == HOME) weather_view_update(snapshot);
     if (active == DISPLAY || active == SOUND) {
         snprintf(text, sizeof(text), "当前：%d",
                  active == DISPLAY ? config.brightness : config.volume);
@@ -793,6 +756,7 @@ static void tick(lv_timer_t *timer) {
 }
 static void game_timer(lv_timer_t *t) {
     games_tick();
+    if(active==HOME)weather_view_animate();
 }
 void shell_init(void) {
     for (unsigned i = 0; i < sizeof(defaults) / sizeof(defaults[0]); i++)
@@ -810,6 +774,7 @@ void shell_init(void) {
     lv_obj_set_style_text_color(screen, lv_color_hex(0xe6edf7), 0);
     lv_obj_set_style_text_font(screen, &font, 0);
     lv_obj_clear_flag(screen, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_event_cb(screen,gesture,LV_EVENT_GESTURE,NULL);
     render(HOME);
     lv_timer_create(tick, 150, NULL);
     lv_timer_create(game_timer, 33, NULL);

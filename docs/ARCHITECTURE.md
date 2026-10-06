@@ -16,7 +16,7 @@
 - `services/bluetooth`：BLE 扫描、GATT 客户端连接、加密配对和绑定。具体 GATT 服务留待后续。
 - `services/sensors`：50 Hz 姿态采样和平滑；游戏负责相对中立位置校准。
 - `apps/shell`：应用注册表、返回历史、深色主题、配置与文件页面。
-- `apps/games`：重力迷宫、倾斜躲避、Color Flood；离开页面停止更新。
+- `apps/games`：雷电突击、层叠三消、Color Flood 的 LVGL 视图；离开页面停止更新。`core/arcade` 独立实现射击与三消规则，固定容量对象池，可在主机上验证。`assets/ui_art` 由 `scripts/generate_ui_art.py` 生成原创抗锯齿图案，采用面板要求的交换字节 RGB565+A。`apps/weather_view` 实现动态天气场景；主页／菜单禁用滚动并向根页面传递手势。
 
 ## 添加应用
 
