@@ -41,3 +41,5 @@ python3 scripts/demo_serial.py 'page 0' shot --output artifacts/home.log
 新增应用使用 `terminal_app_t` 和 `shell_register_app()`，提供独立的创建／进入／离开／销毁回调；内容根节点由 `shell_content()` 获取。自定义应用 ID 使用 100 以上，注册描述符保持静态生命周期。后台服务通过 `terminal_submit()` 提交有界作业。新增语音工具在 `services/tools.c` 的工具表登记描述、参数与执行函数。
 
 详细说明：[架构](docs/ARCHITECTURE.md)、[验证记录](docs/VALIDATION.md)、[历史硬件测试](docs/HARDWARE_DEMO.md)。原始 Flash 和完整测试归档保留于 `backups/`，未更改 SD 卡原有文件。
+
+菜单采用每页四个大图标，Wi-Fi 状态固定显示在所有页面顶端。游戏将管理按钮合并到顶栏，游戏区域为 312×200。姿态任务以 100 Hz 为调度目标（本轮游戏实测约 70–80 Hz），12 ms 时间常数滤波；雷电以 20 ms 逻辑周期更新，并保留小角度死区和灵敏度设置。实际显示帧率取决于面板传输负载。

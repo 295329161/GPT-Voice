@@ -1,8 +1,8 @@
 #include "shell.h"
-#include "weather_view.h"
 #include "core/terminal.h"
 #include "esp32_s3_szp.h"
 #include "esp_heap_caps.h"
+#include "weather_view.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -71,6 +71,7 @@ static const terminal_app_t defaults[] = {
      .create = ha_page}};
 static const terminal_app_t *registry[24];
 static int registry_count;
+#define MENU_PAGE_SIZE 4
 bool shell_register_app(const terminal_app_t *app) {
     if (!app || !app->create || !app->name || !app->icon || registry_count >= 24)
         return false;
@@ -87,7 +88,7 @@ static const terminal_app_t *find_app(int id) {
     return NULL;
 }
 static lv_obj_t *screen, *content, *notice, *heading, *info, *list, *edit_a, *edit_b, *keyboard,
-    *picture;
+    *picture, *top_wifi, *game_bar;
 LV_FONT_DECLARE(terminal_cjk);
 static lv_font_t font;
 static int active = HOME, pending = -1, menu_page;
@@ -146,11 +147,11 @@ static void gesture(lv_event_t *e) {
     if ((active == HOME) && (dir == LV_DIR_LEFT || dir == LV_DIR_RIGHT))
         shell_open(MENU);
     else if (active == MENU && (dir == LV_DIR_LEFT || dir == LV_DIR_RIGHT)) {
-        int pages=(registry_count+5)/6;
-        menu_page=(menu_page+(dir==LV_DIR_LEFT?1:pages-1))%pages;
+        int pages = (registry_count + MENU_PAGE_SIZE - 1) / MENU_PAGE_SIZE;
+        menu_page = (menu_page + (dir == LV_DIR_LEFT ? 1 : pages - 1)) % pages;
         shell_open(MENU);
     }
-    if ((active==HOME||active==MENU) && (dir==LV_DIR_LEFT||dir==LV_DIR_RIGHT))
+    if ((active == HOME || active == MENU) && (dir == LV_DIR_LEFT || dir == LV_DIR_RIGHT))
         lv_indev_wait_release(lv_indev_get_act());
 }
 static void keyboard_done(lv_event_t *e) {
@@ -191,33 +192,48 @@ static void home_page(void) {
 static void gesture_tree(lv_obj_t *o) {
     lv_obj_clear_flag(o, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_flag(o, LV_OBJ_FLAG_GESTURE_BUBBLE);
-    for (unsigned i=0;i<lv_obj_get_child_cnt(o);i++) gesture_tree(lv_obj_get_child(o,i));
+    for (unsigned i = 0; i < lv_obj_get_child_cnt(o); i++)
+        gesture_tree(lv_obj_get_child(o, i));
 }
 static void menu_more(lv_event_t *e) {
-    menu_page = (menu_page + 1) % ((registry_count + 5) / 6);
+    menu_page = (menu_page + 1) % ((registry_count + MENU_PAGE_SIZE - 1) / MENU_PAGE_SIZE);
     shell_open(MENU);
 }
 static void menu_create(void) {
-    int start = menu_page * 6;
-    for (int i = start; i < registry_count && i < start + 6; i++) {
-        int k = i - start;
-        lv_obj_t *b = ui_button(content, "", k % 3 * 101, k / 3 * 77, 95, navigate,
+    int start = menu_page * MENU_PAGE_SIZE;
+    int count = registry_count - start;
+    if (count > MENU_PAGE_SIZE)
+        count = MENU_PAGE_SIZE;
+    for (int k = 0; k < count; k++) {
+        int i = start + k;
+        int x = (k % 2) * 156;
+        if (count == 3 && k == 2)
+            x = 78;
+        lv_obj_t *b = ui_button(content, "", x, (k / 2) * 96, 148, navigate,
                                 (void *)(intptr_t)registry[i]->id);
-        lv_obj_set_height(b, 70);
-        lv_obj_set_style_bg_color(b, lv_color_hex(0x1c293c), 0);
-        lv_obj_t *icon = ui_label(b, registry[i]->icon, 21, -4, 50);
+        lv_obj_set_height(b, 90);
+        lv_obj_set_style_pad_all(b, 0, 0);
+        lv_obj_set_style_radius(b, 16, 0);
+        lv_obj_set_style_bg_color(b, lv_color_hex(0x1b2b40), 0);
+        lv_obj_set_style_bg_grad_color(b, lv_color_hex(0x243d53), 0);
+        lv_obj_set_style_bg_grad_dir(b, LV_GRAD_DIR_VER, 0);
+        lv_obj_t *icon = ui_label(b, registry[i]->icon, 0, 5, 148);
+        lv_obj_set_style_text_align(icon, LV_TEXT_ALIGN_CENTER, 0);
         lv_obj_set_style_text_color(icon, lv_color_hex(registry[i]->color), 0);
-        lv_obj_set_style_text_font(icon, &lv_font_montserrat_24, 0);
-        lv_obj_t *name = ui_label(b, registry[i]->name, -8, 28, 92);
+        lv_obj_set_style_text_font(icon, &lv_font_montserrat_48, 0);
+        lv_obj_t *name = ui_label(b, registry[i]->name, 0, 65, 148);
         lv_obj_set_style_text_align(name, LV_TEXT_ALIGN_CENTER, 0);
-        if (i == 6)
+        if (registry[i]->id == HA)
             lv_obj_set_style_text_font(name, &lv_font_montserrat_14, 0);
     }
-    int pages=(registry_count+5)/6;
-    lv_obj_t *pager=ui_button(content,"",100,155,100,menu_more,NULL);
-    lv_obj_set_style_bg_opa(pager,0,0);
-    lv_obj_set_style_pad_all(pager,0,0);
-    for(int i=0;i<pages;i++) decoration(pager,40+(i-pages/2)*16,12,i==menu_page?16:6,6,i==menu_page?0xc7e7ff:0x506780,3);
+    int pages = (registry_count + MENU_PAGE_SIZE - 1) / MENU_PAGE_SIZE;
+    lv_obj_t *pager = ui_button(content, "", 100, 186, 104, menu_more, NULL);
+    lv_obj_set_height(pager, 14);
+    lv_obj_set_style_bg_opa(pager, 0, 0);
+    lv_obj_set_style_pad_all(pager, 0, 0);
+    for (int i = 0; i < pages; i++)
+        decoration(pager, 32 + i * 24, 4, i == menu_page ? 16 : 6, 5,
+                   i == menu_page ? 0xc7e7ff : 0x506780, 3);
 }
 static void settings_page(void) {
     const char *names[] = {"显示亮度", "声音音量",       "Wi-Fi 连接", "蓝牙扫描与配对",
@@ -562,16 +578,31 @@ static void render(int page) {
     active = page;
     lv_obj_clean(screen);
     info = list = picture = NULL;
-    heading = ui_label(screen, "", 57, 7, 205);
-    if(page!=HOME){
-        ui_button(screen, LV_SYMBOL_LEFT, 5, 3, 43, back, (void *)MENU);
-        ui_button(screen, LV_SYMBOL_HOME, 276, 3, 39, navigate, (void *)HOME);
+    bool game = page == SHOOTER || page == TILES || page == FLOOD;
+    heading = ui_label(screen, "", 46, 9, 185);
+    game_bar = screen;
+    if (page != HOME) {
+        ui_button(screen, LV_SYMBOL_LEFT, 4, 3, 32, back, (void *)MENU);
+        if (!game)
+            ui_button(screen, LV_SYMBOL_HOME, 244, 3, 34, navigate, (void *)HOME);
     }
     content = lv_obj_create(screen);
     lv_obj_remove_style_all(content);
     lv_obj_set_pos(content, 9, 40);
     lv_obj_set_size(content, 302, 190);
-    if(page==HOME){lv_obj_set_pos(content,0,0);lv_obj_set_size(content,320,240);}
+    if (page == MENU) {
+        lv_obj_set_pos(content, 8, 36);
+        lv_obj_set_size(content, 304, 200);
+    }
+    if (game) {
+        lv_obj_set_pos(content, 4, 36);
+        lv_obj_set_size(content, 312, 200);
+        lv_obj_add_flag(heading, LV_OBJ_FLAG_HIDDEN);
+    }
+    if (page == HOME) {
+        lv_obj_set_pos(content, 0, 0);
+        lv_obj_set_size(content, 320, 240);
+    }
     lv_obj_set_scroll_dir(content, LV_DIR_VER);
     lv_obj_set_style_text_font(content, &font, 0);
     lv_obj_set_style_text_color(content, lv_color_hex(0xe6edf7), 0);
@@ -581,7 +612,8 @@ static void render(int page) {
     lv_obj_set_style_text_color(notice, lv_color_hex(0xa7bed8), 0);
     lv_label_set_long_mode(notice, LV_LABEL_LONG_DOT);
     lv_obj_set_height(notice, 18);
-    if(page==HOME||page==MENU||page==SHOOTER||page==TILES||page==FLOOD)lv_obj_add_flag(notice,LV_OBJ_FLAG_HIDDEN);
+    if (page == HOME || page == MENU || page == SHOOTER || page == TILES || page == FLOOD)
+        lv_obj_add_flag(notice, LV_OBJ_FLAG_HIDDEN);
     keyboard = lv_keyboard_create(screen);
     lv_obj_set_size(keyboard, 320, 125);
     lv_obj_align(keyboard, LV_ALIGN_BOTTOM_MID, 0, 0);
@@ -636,15 +668,15 @@ static void render(int page) {
         break;
     case SHOOTER:
         title = "雷电突击";
-        games_create(content, 0);
+        games_create(content, game_bar, 0);
         break;
     case TILES:
         title = "羊了个羊";
-        games_create(content, 1);
+        games_create(content, game_bar, 1);
         break;
     case FLOOD:
         title = "Color Flood";
-        games_create(content, 2);
+        games_create(content, game_bar, 2);
         break;
     case FILE_DETAIL:
         title = "文件操作";
@@ -656,9 +688,16 @@ static void render(int page) {
         break;
     }
 ready:
+    top_wifi = ui_label(screen, LV_SYMBOL_WIFI, 290, 10, 26);
+    lv_obj_set_style_text_font(top_wifi, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_opa(top_wifi, snapshot->online ? 255 : 55, 0);
     lv_label_set_text(heading, title);
-    if(page==HOME){lv_obj_add_flag(heading,LV_OBJ_FLAG_HIDDEN);weather_view_update(snapshot);}
-    if(page==HOME||page==MENU)gesture_tree(content);
+    if (page == HOME) {
+        lv_obj_add_flag(heading, LV_OBJ_FLAG_HIDDEN);
+        weather_view_update(snapshot);
+    }
+    if (page == HOME || page == MENU)
+        gesture_tree(content);
 }
 static void tick(lv_timer_t *timer) {
     state_lock();
@@ -669,11 +708,13 @@ static void tick(lv_timer_t *timer) {
         pending = -1;
         render(p);
     }
+    lv_obj_set_style_text_opa(top_wifi, snapshot->online ? 255 : 55, 0);
     char text[768];
     lv_label_set_text(notice, active == HOME ? "天气数据 Open-Meteo" : snapshot->notice);
     if (dialog)
         return;
-    if (active == HOME) weather_view_update(snapshot);
+    if (active == HOME)
+        weather_view_update(snapshot);
     if (active == DISPLAY || active == SOUND) {
         snprintf(text, sizeof(text), "当前：%d",
                  active == DISPLAY ? config.brightness : config.volume);
@@ -756,7 +797,8 @@ static void tick(lv_timer_t *timer) {
 }
 static void game_timer(lv_timer_t *t) {
     games_tick();
-    if(active==HOME)weather_view_animate();
+    if (active == HOME)
+        weather_view_animate();
 }
 void shell_init(void) {
     for (unsigned i = 0; i < sizeof(defaults) / sizeof(defaults[0]); i++)
@@ -774,8 +816,8 @@ void shell_init(void) {
     lv_obj_set_style_text_color(screen, lv_color_hex(0xe6edf7), 0);
     lv_obj_set_style_text_font(screen, &font, 0);
     lv_obj_clear_flag(screen, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_add_event_cb(screen,gesture,LV_EVENT_GESTURE,NULL);
+    lv_obj_add_event_cb(screen, gesture, LV_EVENT_GESTURE, NULL);
     render(HOME);
     lv_timer_create(tick, 150, NULL);
-    lv_timer_create(game_timer, 33, NULL);
+    lv_timer_create(game_timer, 20, NULL);
 }

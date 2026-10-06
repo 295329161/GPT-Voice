@@ -4,8 +4,8 @@
 #include <math.h>
 #include <stdio.h>
 #include <time.h>
-static lv_obj_t *root, *clock_text, *date_text, *city, *temperature, *condition, *range, *wifi,
-    *sun, *clouds[2], *drops[14], *stars[16], *hill;
+static lv_obj_t *root, *clock_text, *date_text, *city, *temperature, *condition, *range, *sun,
+    *clouds[2], *drops[14], *stars[16], *hill;
 static bool night, rain, snow, cloudy;
 static lv_obj_t *shape(lv_obj_t *p, int x, int y, int w, int h, uint32_t c, int radius) {
     lv_obj_t *o = lv_obj_create(p);
@@ -46,7 +46,7 @@ void weather_view_create(lv_obj_t *parent) {
     for (int i = 0; i < 14; i++)
         drops[i] = shape(root, 160 + (i * 47) % 153, 120 + (i * 23) % 100, 2, 8, 0xc4e5f7, 2);
     city = ui_label(root, "中山", 20, 13, 230);
-    wifi = ui_label(root, LV_SYMBOL_WIFI, 280, 13, 28);
+
     clock_text = ui_label(root, "--:--", 18, 43, 210);
     lv_obj_set_style_text_font(clock_text, &lv_font_montserrat_48, 0);
     date_text = ui_label(root, "", 22, 99, 205);
@@ -95,7 +95,7 @@ void weather_view_update(const terminal_state_t *s) {
                                                        : 0x79aec8),
                                    0);
     lv_label_set_text(city, s->weather_city[0] ? s->weather_city : "中山");
-    lv_obj_set_style_text_opa(wifi, s->online ? 255 : 55, 0);
+
     if (s->time_valid) {
         strftime(text, sizeof(text), "%H:%M", &t);
         lv_label_set_text(clock_text, text);

@@ -20,6 +20,8 @@ bool tile_available(const tiles_game_t *g, int i);
 bool tiles_pick(tiles_game_t *g, int i);
 bool tiles_undo(tiles_game_t *g);
 bool tiles_shuffle(tiles_game_t *g);
+#define ARENA_WIDTH 312
+#define ARENA_HEIGHT 200
 #define SHOTS 40
 #define ENEMIES 8
 #define DROPS 5

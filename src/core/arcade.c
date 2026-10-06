@@ -1,4 +1,5 @@
 #include "arcade.h"
+#include "tilt.h"
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -8,8 +9,8 @@ static uint32_t random_next(uint32_t *s) {
 }
 void tile_position(int i, int *x, int *y) {
     int z = i / 12, n = i % 12;
-    *x = 20 + (n % 6) * 40 + z * 8;
-    *y = 2 + (n / 6) * 40 + z * 13;
+    *x = 10 + (n % 6) * 46 + z * 10;
+    *y = 10 + (n / 6) * 52 + z * 16;
 }
 bool tile_available(const tiles_game_t *g, int i) {
     if (i < 0 || i >= TILE_COUNT || g->tiles[i].removed)
@@ -19,7 +20,7 @@ bool tile_available(const tiles_game_t *g, int i) {
     for (int j = (i / 12 + 1) * 12; j < TILE_COUNT; j++) {
         int a, b;
         tile_position(j, &a, &b);
-        if (!g->tiles[j].removed && abs(x - a) < 38 && abs(y - b) < 38)
+        if (!g->tiles[j].removed && abs(x - a) < 42 && abs(y - b) < 45)
             return false;
     }
     return true;
@@ -106,8 +107,8 @@ bool tiles_shuffle(tiles_game_t *g) {
 void shooter_init(shooter_t *g, uint32_t seed) {
     memset(g, 0, sizeof(*g));
     g->rng = seed;
-    g->x = 150;
-    g->y = 124;
+    g->x = ARENA_WIDTH / 2;
+    g->y = ARENA_HEIGHT - 32;
     g->lives = 3;
     g->power = 1;
     g->spawn = .4f;
@@ -130,8 +131,8 @@ void shooter_tick(shooter_t *g, float roll, float pitch, float dt, int sensitivi
         return;
     dt = clamp(dt, 0, .05f);
     g->elapsed += dt;
-    g->x = clamp(g->x + roll * sensitivity * 1.5f * dt, 16, 284);
-    g->y = clamp(g->y + pitch * sensitivity * 1.5f * dt, 20, 140);
+    g->x = clamp(g->x + tilt_speed(roll, sensitivity) * dt, 16, ARENA_WIDTH - 16);
+    g->y = clamp(g->y + tilt_speed(pitch, sensitivity) * dt, 20, ARENA_HEIGHT - 17);
     g->invulnerable = fmaxf(0, g->invulnerable - dt);
     g->fire -= dt;
     g->spawn -= dt;
@@ -157,7 +158,7 @@ void shooter_tick(shooter_t *g, float roll, float pitch, float dt, int sensitivi
             actor_t *a = &g->shots[i];
             a->x += a->vx * dt;
             a->y += a->vy * dt;
-            if (a->y < -12 || a->x < 0 || a->x > 300)
+            if (a->y < -12 || a->x < 0 || a->x > ARENA_WIDTH)
                 a->active = false;
         }
     for (int i = 0; i < ENEMIES; i++)
@@ -166,7 +167,7 @@ void shooter_tick(shooter_t *g, float roll, float pitch, float dt, int sensitivi
             float old = a->y;
             a->x += a->vx * dt;
             a->y += a->vy * dt;
-            if (a->x < 16 || a->x > 284)
+            if (a->x < 16 || a->x > ARENA_WIDTH - 16)
                 a->vx = -a->vx;
             if (old < 45 && a->y >= 45)
                 spawn(g->hostile, HOSTILE, a->x, a->y, 0, 55, 1, 0);
@@ -189,14 +190,14 @@ void shooter_tick(shooter_t *g, float roll, float pitch, float dt, int sensitivi
                 g->invulnerable = 1.5f;
                 a->active = false;
             }
-            if (a->y > 175)
+            if (a->y > ARENA_HEIGHT + 20)
                 a->active = false;
         }
     for (int i = 0; i < HOSTILE; i++)
         if (g->hostile[i].active) {
             actor_t *a = &g->hostile[i];
             a->y += a->vy * dt;
-            if (a->y > 165)
+            if (a->y > ARENA_HEIGHT + 10)
                 a->active = false;
             if (hit(g->x, g->y, a->x, a->y, 10) && g->invulnerable <= 0) {
                 g->lives--;
@@ -208,7 +209,7 @@ void shooter_tick(shooter_t *g, float roll, float pitch, float dt, int sensitivi
         if (g->drops[i].active) {
             actor_t *a = &g->drops[i];
             a->y += a->vy * dt;
-            if (a->y > 172)
+            if (a->y > ARENA_HEIGHT + 15)
                 a->active = false;
             if (hit(g->x, g->y, a->x, a->y, 23)) {
                 a->active = false;

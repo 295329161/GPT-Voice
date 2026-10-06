@@ -40,8 +40,14 @@ int main(void) {
     shooter_t s;
     shooter_init(&s, 1);
     shooter_tick(&s, 100000, 100000, .05f, 5);
-    assert(s.x == 284 && s.y == 140);
-    shooter_tick(&s, -100000, -100000, .05f, 5);
+    assert(s.x <= ARENA_WIDTH - 16 && s.y <= ARENA_HEIGHT - 17);
+    for (int i = 0; i < 100; i++)
+        shooter_tick(&s, 100000, 100000, .05f, 5);
+    assert(s.x == ARENA_WIDTH - 16 && s.y == ARENA_HEIGHT - 17);
+    s.over = false;
+    s.lives = 100;
+    for (int i = 0; i < 100; i++)
+        shooter_tick(&s, -100000, -100000, .05f, 5);
     assert(s.x == 16 && s.y == 20);
     shooter_init(&s, 1);
     s.drops[0] = (actor_t){s.x, s.y, 0, 0, 1, 1, true};

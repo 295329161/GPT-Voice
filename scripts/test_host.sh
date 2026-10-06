@@ -10,8 +10,10 @@ cc -std=c11 -Wall -Wextra -Werror -fsanitize=address,undefined -I src tests/resa
 artifacts/tests/resampler
 cc -std=c11 -Wall -Wextra -Werror -fsanitize=address,undefined -I src tests/path_test.c src/core/path.c -o artifacts/tests/path
 artifacts/tests/path
-cc -std=c11 -Wall -Wextra -Werror -fsanitize=address,undefined -I src tests/arcade_test.c src/core/arcade.c -lm -o artifacts/tests/arcade
+cc -std=c11 -Wall -Wextra -Werror -fsanitize=address,undefined -I src tests/arcade_test.c src/core/arcade.c src/core/tilt.c -lm -o artifacts/tests/arcade
 artifacts/tests/arcade
+cc -std=c11 -Wall -Wextra -Werror -fsanitize=address,undefined -I src tests/tilt_test.c src/core/tilt.c -lm -o artifacts/tests/tilt
+artifacts/tests/tilt
 c++ -std=c++17 -Wall -Wextra -Werror -fsanitize=address,undefined -I tests/stubs -I components/audio_player tests/mp3_recovery_test.cpp components/audio_player/audio_mp3.cpp -o artifacts/tests/mp3_recovery
 artifacts/tests/mp3_recovery
 python3 tests/test_stage.py

@@ -155,28 +155,26 @@ static void flood_cb(lv_event_t *e) {
     }
     finished = win || steps >= 25;
     char s[64];
-    snprintf(s, sizeof(s),
-             win        ? "成功！%d 步"
-             : finished ? "步数用完 · 重开"
-                        : "%d / 25 步",
-             steps);
+    snprintf(s, sizeof(s), win ? "成功！%d 步" : finished ? "步数用完" : "%d / 25 步", steps);
     lv_label_set_text(hud, s);
 }
-void games_create(lv_obj_t *parent, int which) {
+void games_create(lv_obj_t *parent, lv_obj_t *toolbar, int which) {
     kind = which;
     lv_obj_clear_flag(parent, LV_OBJ_FLAG_SCROLLABLE);
-    hud = ui_label(parent, "", 2, 4, 164);
+    hud = ui_label(toolbar, "", 42, 10, kind == 1 ? 70 : 126);
+    lv_label_set_long_mode(hud, LV_LABEL_LONG_CLIP);
     if (kind == 1) {
-        undo_button = ui_button(parent, "撤回", 102, 0, 58, undo_cb, NULL);
-        shuffle_button = ui_button(parent, "洗牌", 166, 0, 64, shuffle_cb, NULL);
+        undo_button = ui_button(toolbar, "撤回", 116, 3, 50, undo_cb, NULL);
+        shuffle_button = ui_button(toolbar, "洗牌", 170, 3, 58, shuffle_cb, NULL);
     } else
-        pause_button = ui_button(parent, "暂停", 174, 0, 58, pause_cb, NULL);
-    ui_button(parent, "重开", 238, 0, 60, reset_cb, NULL);
-    board = rect(parent, 0, 34, 300, 155, kind == 1 ? 0xc5debc : 0x0b172b, 12);
+        pause_button = ui_button(toolbar, "暂停", 174, 3, 50, pause_cb, NULL);
+    ui_button(toolbar, "重开", 232, 3, 50, reset_cb, NULL);
+    board = rect(parent, 0, 0, ARENA_WIDTH, ARENA_HEIGHT, kind == 1 ? 0xc5debc : 0x0b172b, 12);
     if (kind == 0) {
         for (int i = 0; i < 24; i++) {
-            stars[i] = rect(board, (i * 83) % 300, (i * 47) % 155, i % 3 == 0 ? 2 : 1,
-                            i % 3 == 0 ? 5 : 2, i % 3 == 0 ? 0x466681 : 0x273e58, 1);
+            stars[i] =
+                rect(board, (i * 83) % ARENA_WIDTH, (i * 47) % ARENA_HEIGHT, i % 3 == 0 ? 2 : 1,
+                     i % 3 == 0 ? 5 : 2, i % 3 == 0 ? 0x466681 : 0x273e58, 1);
         }
         for (int i = 0; i < SHOTS; i++)
             shot[i] = rect(board, 0, 0, 3, 10, 0x8deaff, 2);
@@ -201,33 +199,33 @@ void games_create(lv_obj_t *parent, int which) {
         for (int i = 0; i < TILE_COUNT; i++) {
             int x, y;
             tile_position(i, &x, &y);
-            cards[i] = rect(board, x, y, 38, 39, 0xfff9e8, 7);
+            cards[i] = rect(board, x, y, 42, 45, 0xfff9e8, 7);
             lv_obj_set_style_shadow_width(cards[i], 3, 0);
             lv_obj_set_style_shadow_ofs_y(cards[i], 2, 0);
             lv_obj_set_style_shadow_color(cards[i], lv_color_hex(0x6c8c70), 0);
             lv_obj_add_flag(cards[i], LV_OBJ_FLAG_CLICKABLE);
             lv_obj_add_event_cb(cards[i], tile_click, LV_EVENT_CLICKED, (void *)(intptr_t)i);
             card_art[i] = sprite(cards[i], tile_art[0]);
-            lv_obj_set_pos(card_art[i], 1, 0);
+            lv_obj_set_pos(card_art[i], 3, 3);
         }
-        rect(board, 5, 113, 290, 41, 0x73987b, 10);
+        rect(board, 4, 153, 304, 46, 0x73987b, 10);
         for (int i = 0; i < TRAY_CAP; i++) {
-            rect(board, 10 + i * 40, 116, 38, 36, 0xe2ecd0, 5);
+            rect(board, 7 + i * 43, 158, 40, 37, 0xe2ecd0, 5);
             tray[i] = sprite(board, tile_art[0]);
-            lv_obj_set_pos(tray[i], 11 + i * 40, 116);
+            lv_obj_set_pos(tray[i], 9 + i * 43, 158);
         }
     } else {
         for (int r = 0; r < 12; r++)
             for (int c = 0; c < 12; c++)
-                cells[r * 12 + c] = rect(board, c * 16, r * 12, 15, 11, colors[0], 2);
+                cells[r * 12 + c] = rect(board, c * 16, r * 16, 15, 15, colors[0], 2);
         for (int i = 0; i < 6; i++) {
-            lv_obj_t *b = ui_button(board, "", 207 + (i % 2) * 46, 5 + (i / 2) * 48, 40, flood_cb,
+            lv_obj_t *b = ui_button(board, "", 218 + (i % 2) * 47, 8 + (i / 2) * 64, 40, flood_cb,
                                     (void *)(uintptr_t)i);
-            lv_obj_set_height(b, 40);
+            lv_obj_set_height(b, 52);
             lv_obj_set_style_bg_color(b, lv_color_hex(colors[i]), 0);
         }
     }
-    banner = ui_label(board, "", 8, 58, 284);
+    banner = ui_label(board, "", 8, 80, 296);
     lv_obj_set_style_text_align(banner, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_style_bg_color(banner, lv_color_hex(0x1c3541), 0);
     lv_obj_set_style_bg_opa(banner, 240, 0);
@@ -257,7 +255,7 @@ void games_tick(void) {
     }
     state_lock();
     bool valid = state->imu_valid;
-    float r = state->roll - zero_r, p = state->pitch - zero_p;
+    float r = remainderf(state->roll - zero_r, 360.f), p = state->pitch - zero_p;
     int sensitivity = config.sensitivity;
     state_unlock();
     if (!valid) {
@@ -267,7 +265,7 @@ void games_tick(void) {
     if (!paused)
         shooter_tick(&flight, r, p, dt, sensitivity);
     for (int i = 0; i < 24; i++)
-        lv_obj_set_y(stars[i], (int)(i * 47 + flight.elapsed * (i % 3 + 1) * 12) % 155);
+        lv_obj_set_y(stars[i], (int)(i * 47 + flight.elapsed * (i % 3 + 1) * 12) % ARENA_HEIGHT);
     lv_obj_set_pos(player, flight.x - 16, flight.y - 17);
     visible(player, flight.invulnerable <= 0 || (now / 100) % 2);
     for (int i = 0; i < ENEMIES; i++) {
