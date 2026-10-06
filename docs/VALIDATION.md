@@ -52,3 +52,7 @@
 进一步语音证据：`voice-pipeline-live.log` / `voice-pipeline.png` 记录自动语音事件和首次连续会话的拥塞；`voice-buffer-live.log` 为扩大缓冲后的复测。
 
 消息顺序修复：新增 conversation 主机回归，覆盖助手先返回、前一轮转写晚于后一轮回答、工具后续回答、整轮历史淘汰和 UTF-8 截断；ASan/UBSan 通过，见 `voice-order-tests.log`。固件构建／烧录见 `voice-order-build.log`、`voice-order-flash.log`。
+
+原生搜索接入修正：依据官方中文 Realtime 开发指南启用 tools 中的 `type: web_search`；之前只注册自定义 Tavily 搜索属于接入遗漏。备用工具更名为 external_web_search，未填备用 Key 时不向模型公布。构建与烧录日志：`voice-search-build.log`、`voice-search-flash.log`；服务端 session.updated 回传工具列表，确认包含 web_search；用户确认按明确搜索提示能得到新闻结果，屏幕提到来源名称。未独立核验每条新闻的原文链接，不能仅凭模型自述认定来源准确。
+
+打断修复：长新闻期间曾出现上传队列满而停止采集，导致无法打断、之后触发服务端闲置超时。现上传短时拥塞丢弃最旧帧并继续采集；接收线程直接处理 speech_started 的静音与播放代次失效，旧音频不会等待普通事件队列才被清理。消息改为已解析 JSON 与接收代次，统一释放，防止迟到的旧 response.created 恢复旧播放。回归测试、编译、烧录通过（voice-barge-*.log）；实机已记录打断丢弃 8 个待播块并继续产生下一轮回答，实际听感与多次打断由用户继续验证。

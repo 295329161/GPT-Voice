@@ -29,7 +29,7 @@ static char *time_tool(const char *unused) {
 static const terminal_tool_t tools[] = {
     {"get_time", "读取设备校准后的北京时间、日期和星期，无需参数", NULL, false, time_tool},
     {"get_weather", "查询实时天气；city 留空使用设备设置的城市", "city", false, weather_tool},
-    {"web_search", "搜索网页中的最新信息，返回来源", "query", true, search_tool}};
+    {"external_web_search", "备用外部网页搜索，返回来源", "query", true, search_tool}};
 const terminal_tool_t *terminal_tools(size_t *count) {
     *count = sizeof(tools) / sizeof(tools[0]);
     return tools;

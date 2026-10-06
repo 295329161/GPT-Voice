@@ -241,7 +241,7 @@ static const char web_page[] =
     "name='model' placeholder='stepaudio-3-realtime-preview' maxlength='79'></label><label>声音 "
     "ID<input name='voice' placeholder='soft-spoken-gentleman' "
     "maxlength='47'></label><label>天气城市（中文或拼音）<input name='city' "
-    "maxlength='79'></label><label>Tavily 搜索 Key（可选）<input name='search_key' type='password' "
+    "maxlength='79'></label><label>Tavily 备用搜索 Key（可选，阶跃内置搜索无需填写）<input name='search_key' type='password' "
     "maxlength='159'></label><button>保存</button></form><p id='s'></p><script>f.onsubmit=async "
     "e=>{e.preventDefault();s.textContent='正在保存…';try{let r=await "
     "fetch('/config',{method:'POST',headers:{'Content-Type':'application/"

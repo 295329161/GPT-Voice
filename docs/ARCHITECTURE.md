@@ -8,11 +8,11 @@
 - `core/resampler`：24/16 kHz 双向流式 FIR 重采样；保留跨块历史，避免音频块边界断裂。
 - `core/path`：SD 根目录边界和 FAT 文件名校验。
 - `core/conversation`：按用户 item ID 与回答 response ID 保存最近 8 轮对话，用户转写与助手流式文字分别更新，再按“你／助手”顺序呈现；避免异步事件到达顺序颠倒角色。
-- `services/network`：Wi-Fi、SNTP、天气、短期开启的网页配置和信息查询。Open-Meteo 查询无需密钥；Tavily 为可选搜索供应商。
+- `services/network`：Wi-Fi、SNTP、天气、短期开启的网页配置和信息查询。Open-Meteo 查询无需密钥；Tavily 为可选备用搜索供应商。
 - `services/storage`：挂载、目录快照、文件操作；有占用的音乐文件禁止修改。不格式化用户 SD 卡，不覆盖已有改名目标。
 - `services/media`：MP3/WAV 文件流解码、播放状态、音频采样率管理；语音抢占时暂停，返回后手动恢复。
-- `services/tools`：语音工具注册表、参数校验与执行分发；注册 `get_time`、`get_weather` 和 `web_search`；无参数工具将 parameter 设为 NULL。时间工具读取 SNTP 校准时钟，未校时返回错误。
-- `services/voice`：StepAudio WebSocket 事件与分片、会话配置、AEC、采集、播放、工具任务。所有队列和网络消息均有上限。
+- `services/tools`：语音工具注册表、参数校验与执行分发；注册 `get_time`、`get_weather` 和 `external_web_search`（仅在提供 Tavily Key 后向模型公布）；无参数工具将 parameter 设为 NULL。时间工具读取 SNTP 校准时钟，未校时返回错误。
+- `services/voice`：StepAudio WebSocket 事件与分片、会话配置、AEC、采集、播放、工具任务。会话通过 `{"type":"web_search"}` 启用阶跃服务器内置搜索，无需 Tavily Key。所有队列和网络消息均有上限。
 - `services/bluetooth`：BLE 扫描、GATT 客户端连接、加密配对和绑定。具体 GATT 服务留待后续。
 - `services/sensors`：50 Hz 姿态采样和平滑；游戏负责相对中立位置校准。
 - `apps/shell`：应用注册表、返回历史、深色主题、配置与文件页面。
@@ -28,9 +28,9 @@
 
 ## 实时音频
 
-硬件保持 16 kHz、两个 32-bit I2S slot。ES7210 缓冲为四路 16-bit 数据：slot0 是 DAC 回采，slot1/3 是麦克风。首版取 slot1 和 slot0 做 ESP-SR AEC（VOIP 低开销模式，处理后限幅放大 4 倍），转换为 24 kHz 单声道 PCM16 后进入独立上传队列。采集任务固定在核心 1，上传任务合并最多 4 帧发送，避免网络等待导致采集丢帧。两者通过连接代次和互斥锁处理退出与重新连接。服务返回 24 kHz PCM16，低通重采样为 16 kHz，再复制到立体声并写入 32-bit slot 高 16 位。
+硬件保持 16 kHz、两个 32-bit I2S slot。ES7210 缓冲为四路 16-bit 数据：slot0 是 DAC 回采，slot1/3 是麦克风。首版取 slot1 和 slot0 做 ESP-SR AEC（VOIP 低开销模式，处理后限幅放大 4 倍），转换为 24 kHz 单声道 PCM16 后进入独立上传队列。采集任务固定在核心 1，上传任务合并最多 4 帧发送，避免网络等待导致采集丢帧。两者通过连接代次和互斥锁处理退出与重新连接。上传队列短时满时淘汰最旧帧、保留最新语音，继续采集，避免一次拥塞永久关闭聆听。服务返回 24 kHz PCM16，低通重采样为 16 kHz，再复制到立体声并写入 32-bit slot 高 16 位。
 
-语音活动由 StepAudio server_vad 判断，能量阈值为 300。语音期间暂时关闭 Wi-Fi 省电，退出恢复原值。WebSocket 收发使用独立锁。检测新语音时取消在途回答、递增播放代次并丢弃旧缓冲。离开页面立即禁止继续采集／上传，再由后台安全销毁连接与 AEC。板上回采参考是否具有适合 AEC 的幅度和延迟，必须用真实扬声器音量与说话场景调试。
+语音活动由 StepAudio server_vad 判断，能量阈值为 300。语音期间暂时关闭 Wi-Fi 省电，退出恢复原值。WebSocket 收发使用独立锁。WebSocket 接收线程检测新语音时立即静音、递增播放代次并丢弃旧缓冲；事件任务再取消在途回答。JSON 消息携带接收时的代次，避免积压的旧回答事件重新启动旧音频。离开页面立即禁止继续采集／上传，再由后台安全销毁连接与 AEC。板上回采参考是否具有适合 AEC 的幅度和延迟，必须用真实扬声器音量与说话场景调试。
 
 ## 播放器依赖
 

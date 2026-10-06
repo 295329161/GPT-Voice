@@ -35,7 +35,11 @@ typedef struct {
     size_t n;
     int16_t pcm[768];
 } upload_packet_t;
-static atomic_bool running, session_ready, desired, initialized;
+static atomic_bool running, session_ready, desired, initialized, playback_blocked;
+typedef struct {
+    cJSON *event;
+    unsigned generation;
+} message_packet_t;
 static atomic_uint lifecycle_request;
 static unsigned lifecycle_applied;
 static atomic_uint epoch;
@@ -103,7 +107,8 @@ static void configure(void) {
              "你是桌面中文语音助手。默认用中文回答，除非用户明确要求其他语言。"
              "回答简洁自然。会话开始时设备时间：%s。"
              "询问当前时间、日期或星期必须调用 get_time，以工具结果为准，不能猜测。"
-             "天气必须调用 get_weather，其他需联网查询的时效信息必须调用 web_search，"
+             "你已获准使用服务器内置 web_search 联网搜索。天气必须调用 get_weather，"
+             "新闻、最新动态等需联网查询的信息必须调用 web_search，回答注明来源，"
              "失败时明确说明，不编造查询结果。", date);
     cJSON_AddStringToObject(s, "instructions", instructions);
     cJSON_AddStringToObject(s, "voice", c.voice);
@@ -117,10 +122,20 @@ static void configure(void) {
     // default energy threshold (2500). Keep above measured idle noise.
     cJSON_AddNumberToObject(vad, "energy_awakeness_threshold", 300);
     cJSON *tools = cJSON_AddArrayToObject(s, "tools");
+    // StepFun executes this built-in tool server-side; no separate search key.
+    cJSON *web_search = cJSON_CreateObject();
+    cJSON_AddStringToObject(web_search, "type", "web_search");
+    cJSON *search_function = cJSON_AddObjectToObject(web_search, "function");
+    cJSON_AddStringToObject(search_function, "description", "用户询问新闻、最新动态或要求联网查询时，搜索互联网并返回来源");
+    cJSON *search_options = cJSON_AddObjectToObject(search_function, "options");
+    cJSON_AddNumberToObject(search_options, "top_k", 5);
+    cJSON_AddNumberToObject(search_options, "timeout_seconds", 5);
+    cJSON_AddItemToArray(tools, web_search);
     size_t tool_count = 0;
     const terminal_tool_t *registered = terminal_tools(&tool_count);
     for (size_t i = 0; i < tool_count; i++) {
         const terminal_tool_t *tool = &registered[i];
+        if (!strcmp(tool->name, "external_web_search") && !c.search_key[0]) continue;
         cJSON *t = cJSON_CreateObject();
         cJSON_AddItemToArray(tools, t);
         cJSON_AddStringToObject(t, "type", "function");
@@ -151,6 +166,22 @@ typedef struct {
     unsigned generation;
 } tool_call_t;
 static QueueHandle_t tools_queue;
+static char submitted_calls[16][96];
+static unsigned submitted_call_index;
+static void submit_tool(cJSON *item) {
+    const char *call_id = str(item, "call_id"), *name = str(item, "name"), *args = str(item, "arguments");
+    if (!*call_id || !*name || strlen(call_id) >= sizeof(submitted_calls[0])) return;
+    for (unsigned i = 0; i < 16; i++)
+        if (!strcmp(call_id, submitted_calls[i])) return;
+    tool_call_t t = {.generation = epoch};
+    if (strlen(args) >= sizeof(t.arguments) || strlen(name) >= sizeof(t.name)) return;
+    strcpy(t.call_id, call_id);
+    strcpy(t.name, name);
+    strcpy(t.arguments, args);
+    if (xQueueSend(tools_queue, &t, 0) == pdTRUE)
+        strcpy(submitted_calls[submitted_call_index++ % 16], call_id);
+    else status("工具任务繁忙");
+}
 static void tool_worker(void *arg) {
     tool_call_t t;
     for (;;) {
@@ -173,8 +204,7 @@ static void tool_worker(void *arg) {
         free(result);
     }
 }
-static void parse(char *message) {
-    cJSON *j = cJSON_Parse(message);
+static void parse(cJSON *j, unsigned generation) {
     if (!j)
         return;
     const char *type = str(j, "type");
@@ -189,6 +219,11 @@ static void parse(char *message) {
         ESP_LOGI("voice", "session model=%s input=%s vad=%s threshold=%g",
                  str(session, "model"), str(session, "input_audio_format"), str(vad, "type"),
                  cJSON_IsNumber(threshold) ? threshold->valuedouble : -1);
+        cJSON *reported_tools = cJSON_GetObjectItem(session, "tools"), *reported_tool;
+        ESP_LOGI("voice", "server-reported tool count=%d", cJSON_GetArraySize(reported_tools));
+        cJSON_ArrayForEach(reported_tool, reported_tools)
+            ESP_LOGI("voice", "server tool type=%s name=%s", str(reported_tool, "type"),
+                     str(cJSON_GetObjectItem(reported_tool, "function"), "name"));
         session_ready = true;
         status("正在聆听 · 可以随时说话");
     } else if (!strcmp(type, "input_audio_buffer.speech_started")) {
@@ -196,7 +231,8 @@ static void parse(char *message) {
             snprintf(cancelled_response, sizeof(cancelled_response), "%s", current_response);
             simple("response.cancel");
         }
-        clear_playback();
+        // The WebSocket callback already muted and invalidated old audio.
+        resampler_init(&down, 24000, 16000);
         status("正在聆听");
     } else if (!strcmp(type, "input_audio_buffer.committed")) {
         conversation_user_begin(conversation, str(j, "item_id"));
@@ -204,10 +240,12 @@ static void parse(char *message) {
     } else if (!strcmp(type, "response.created")) {
         snprintf(current_response, sizeof(current_response), "%s",
                  str(cJSON_GetObjectItem(j, "response"), "id"));
+        if (generation == epoch) playback_blocked = false;
         conversation_response_begin(conversation, current_response);
         transcript_refresh();
         status("正在回答");
     } else if (!strcmp(type, "response.audio.delta")) {
+        if (playback_blocked || generation != epoch) goto done;
         const char *rid = str(j, "response_id");
         if (*rid && !strcmp(rid, cancelled_response))
             goto done;
@@ -220,13 +258,15 @@ static void parse(char *message) {
             n % 2 == 0) {
             int16_t out[256];
             for (size_t i = 0; i < n / 2;) {
+                if (playback_blocked || generation != epoch) break;
                 size_t take = n / 2 - i;
                 if (take > 300)
                     take = 300;
                 size_t count = resampler_process(&down, (int16_t *)raw + i, take, out, 256);
-                audio_packet_t p = {.epoch = epoch, .n = count};
+                audio_packet_t p = {.epoch = generation, .n = count};
                 memcpy(p.pcm, out, count * 2);
                 if (xQueueSend(playback, &p, pdMS_TO_TICKS(100)) != pdTRUE) {
+                    playback_blocked = true;
                     status("音频缓冲已满，本轮已停止");
                     simple("response.cancel");
                     clear_playback();
@@ -244,20 +284,14 @@ static void parse(char *message) {
     } else if (!strcmp(type, "conversation.item.input_audio_transcription.completed")) {
         conversation_user_text(conversation, str(j, "item_id"), str(j, "transcript"));
         transcript_refresh();
+    } else if (!strcmp(type, "response.function_call_arguments.done")) {
+        if (!playback_blocked && generation == epoch) submit_tool(j);
     } else if (!strcmp(type, "response.output_item.done")) {
         cJSON *item = cJSON_GetObjectItem(j, "item");
-        if (!strcmp(str(item, "type"), "function_call")) {
-            tool_call_t t = {.generation = epoch};
-            snprintf(t.name, sizeof(t.name), "%s", str(item, "name"));
-            snprintf(t.call_id, sizeof(t.call_id), "%s", str(item, "call_id"));
-            const char *a = str(item, "arguments");
-            if (strlen(a) < sizeof(t.arguments)) {
-                strcpy(t.arguments, a);
-                if (xQueueSend(tools_queue, &t, 0) != pdTRUE)
-                    status("工具任务繁忙");
-            }
-        }
+        if (!playback_blocked && generation == epoch && !strcmp(str(item, "type"), "function_call")) submit_tool(item);
     } else if (!strcmp(type, "response.done")) {
+        const char *rid = str(cJSON_GetObjectItem(j, "response"), "id");
+        if (*rid && strcmp(rid, current_response)) goto done;
         current_response[0] = 0;
         status("正在聆听");
     } else if (!strcmp(type, "error")) {
@@ -276,17 +310,17 @@ static void parse(char *message) {
             terminal_notice("Realtime 错误：%.80s", code);
     }
 done:
-    cJSON_Delete(j);
+    return;
 }
 static void message_worker(void *arg) {
-    char *s;
+    message_packet_t message;
     for (;;) {
-        xQueueReceive(messages, &s, portMAX_DELAY);
+        xQueueReceive(messages, &message, portMAX_DELAY);
         xSemaphoreTake(parse_mutex, portMAX_DELAY);
         if (running)
-            parse(s);
+            parse(message.event, message.generation);
         xSemaphoreGive(parse_mutex);
-        free(s);
+        cJSON_Delete(message.event);
     }
 }
 static void websocket_event(void *arg, esp_event_base_t base, int32_t event, void *data) {
@@ -312,12 +346,25 @@ static void websocket_event(void *arg, esp_event_base_t base, int32_t event, voi
         received += e->data_len;
         if (received == total) {
             fragment[total] = 0;
-            if (xQueueSend(messages, &fragment, 0) != pdTRUE) {
-                free(fragment);
+            cJSON *j = cJSON_Parse(fragment);
+            free(fragment);
+            fragment = NULL;
+            if (!j) return;
+            if (!strcmp(str(j, "type"), "input_audio_buffer.speech_started")) {
+                // Do not let a barge-in wait behind buffered audio events.
+                playback_blocked = true;
+                unsigned queued = uxQueueMessagesWaiting(playback);
+                atomic_fetch_add(&epoch, 1);
+                xQueueReset(playback);
+                pa_en(0);
+                ESP_LOGI("voice", "barge-in: muted speaker, discarded %u audio blocks", queued);
+            }
+            message_packet_t message = {.event = j, .generation = epoch};
+            if (xQueueSend(messages, &message, 0) != pdTRUE) {
+                cJSON_Delete(j);
                 session_ready = false;
                 status("消息队列拥塞，请重新连接");
             }
-            fragment = NULL;
         }
     }
 }
@@ -383,7 +430,8 @@ static void capture_task(void *arg) {
         }
         int16_t *raw = mem, *mic = raw + 4 * n, *ref = mic + n, *clean = ref + n;
         upload_packet_t packet = {.generation = connection_generation};
-        unsigned frames = 0;
+        unsigned frames = 0, dropped_frames = 0;
+        upload_packet_t obsolete;
         int64_t read_us = 0, dsp_us = 0;
         int peaks[4] = {0}, clean_peak = 0, uploaded_peak = 0;
         while (running && session_ready) {
@@ -415,9 +463,10 @@ static void capture_task(void *arg) {
             for (size_t i = 0; i < packet.n; i++)
                 if (abs(packet.pcm[i]) > uploaded_peak) uploaded_peak = abs(packet.pcm[i]);
             if (xQueueSend(upload, &packet, 0) != pdTRUE) {
-                session_ready = false;
-                status("上传网络过慢，请重新连接");
-                ESP_LOGE("voice", "Audio upload queue full");
+                // A transient network stall must not permanently stop listening.
+                // Keep the newest speech instead of accumulating stale latency.
+                if (xQueueReceive(upload, &obsolete, 0) == pdTRUE) dropped_frames++;
+                if (xQueueSend(upload, &packet, 0) != pdTRUE) dropped_frames++;
             }
             dsp_us += esp_timer_get_time() - read_end;
             if (++frames % 160 == 0) {
@@ -425,7 +474,7 @@ static void capture_task(void *arg) {
                          frames, peaks[0], peaks[1], peaks[2], peaks[3], clean_peak,
                          uploaded_peak, (unsigned)n, (unsigned)packet.n,
                          (unsigned)uxQueueMessagesWaiting(upload));
-                ESP_LOGI("voice", "frame average us read=%lld dsp=%lld", read_us / 160, dsp_us / 160);
+                ESP_LOGI("voice", "frame average us read=%lld dsp=%lld dropped=%u", read_us / 160, dsp_us / 160, dropped_frames);
                 read_us = dsp_us = 0;
                 memset(peaks, 0, sizeof(peaks));
                 clean_peak = uploaded_peak = 0;
@@ -444,7 +493,7 @@ static void playback_task(void *arg) {
         if (xQueueReceive(playback, &p, pdMS_TO_TICKS(50)) != pdTRUE)
             continue;
         xSemaphoreTake(playback_mutex, portMAX_DELAY);
-        if (!running || p.epoch != epoch) {
+        if (!running || playback_blocked || p.epoch != epoch) {
             xSemaphoreGive(playback_mutex);
             continue;
         }
@@ -454,6 +503,7 @@ static void playback_task(void *arg) {
         size_t done = 0;
         pa_en(1);
         demo_audio_output(stereo, p.n * 4, &done);
+        if (playback_blocked || p.epoch != epoch) pa_en(0);
         xSemaphoreGive(playback_mutex);
     }
 }
@@ -466,7 +516,7 @@ void voice_init(void) {
     parse_mutex = xSemaphoreCreateMutex();
     upload_mutex = xSemaphoreCreateMutex();
     idle = xEventGroupCreate();
-    messages = xQueueCreateWithCaps(64, sizeof(char *), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    messages = xQueueCreateWithCaps(64, sizeof(message_packet_t), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     upload = xQueueCreateWithCaps(32, sizeof(upload_packet_t), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     playback =
         xQueueCreateWithCaps(1024, sizeof(audio_packet_t), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
@@ -527,9 +577,9 @@ void voice_stop(void) {
     state->voice_active = false;
     state_unlock();
     status("会话已结束");
-    char *message;
+    message_packet_t message;
     while (xQueueReceive(messages, &message, 0) == pdTRUE)
-        free(message);
+        cJSON_Delete(message.event);
     xSemaphoreGive(parse_mutex);
     xSemaphoreGive(playback_mutex);
     xSemaphoreGive(upload_mutex);
@@ -566,7 +616,10 @@ void voice_start(void) {
     resampler_init(&up, 16000, 24000);
     resampler_init(&down, 24000, 16000);
     current_response[0] = cancelled_response[0] = 0;
+    memset(submitted_calls, 0, sizeof(submitted_calls));
+    submitted_call_index = 0;
     conversation_reset(conversation);
+    playback_blocked = false;
     char uri[320], headers[320];
     snprintf(uri, sizeof(uri), "%s?model=%s", c.endpoint, c.model);
     snprintf(headers, sizeof(headers), "Authorization: Bearer %s\r\n", c.api_key);

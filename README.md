@@ -20,7 +20,7 @@
 2. 同一局域网浏览器访问屏幕显示的地址，输入设备屏幕配对码。
 3. 填写 StepFun API Key；默认模型是 `stepaudio-3-realtime-preview`，声音是 `soft-spoken-gentleman`。使用 Step Plan 套餐时，接口地址填写 `wss://api.stepfun.com/step_plan/v1/realtime`，模型填写 `stepaudio-2.5-realtime`，音色可填写官方示例的 `linjiajiejie`；地址不需要带模型查询参数。参见 [Step Plan 语音接入](https://platform.stepfun.com/docs/zh/step-plan/integrations/audio-api)。
 4. 模型、声音、WebSocket 地址可以修改。密钥字段留空保留原值；页面不回显已存密钥。
-5. 天气工具使用无需密钥的 Open-Meteo。网页搜索采用可选 Tavily API Key；未配置时如实报告不可用，不伪造查询结果。
+5. 天气工具使用无需密钥的 Open-Meteo。实时语音会话显式启用阶跃原生 `web_search`，由服务器执行，无需额外填写 Tavily Key。Tavily 仅作为可选备用搜索，填写 Key 后才向模型提供 `external_web_search`。参见 [Realtime 内置搜索说明](https://platform.stepfun.com/docs/zh/guides/developer/realtime#网络搜索工具-web_search)。
 6. 配置网页 10 分钟后自动关闭。仅在可信局域网开启；个人开发版没有启用 Flash 加密。
 
 实时语音已实现流式音频、服务端 VAD、取消旧回答、字幕、工具回传、ESP-SR AEC 和 16/24 kHz 转换。真实服务会话和扬声器回声效果需要有效密钥及实机说话验收，不能仅凭编译通过视为验证完成。
