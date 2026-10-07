@@ -27,7 +27,7 @@ static void show(lv_obj_t *o, bool yes) {
 void weather_view_create(lv_obj_t *parent) {
     root = parent;
     lv_obj_set_style_bg_opa(root, 255, 0);
-    lv_obj_set_style_bg_grad_dir(root, LV_GRAD_DIR_VER, 0);
+    lv_obj_set_style_bg_grad_dir(root, LV_GRAD_DIR_NONE, 0);
     for (int i = 0; i < 16; i++) {
         stars[i] = shape(root, 155 + (i * 43) % 150, 20 + (i * 29) % 143, i % 3 ? 1 : 2,
                          i % 3 ? 1 : 2, 0xd3e6fa, 2);
@@ -92,12 +92,8 @@ static void update(const terminal_state_t *s, int preview_code, bool preview_nig
     rain = valid && code >= 51 && !(code >= 71 && code <= 77) && !(code >= 85 && code <= 86);
     snow = valid && ((code >= 71 && code <= 77) || (code >= 85 && code <= 86));
     cloudy = valid && code > 0;
-    lv_obj_set_style_bg_color(root, lv_color_hex(night ? 0x142440 : rain ? 0x38546c : 0x286eab), 0);
-    lv_obj_set_style_bg_grad_color(root,
-                                   lv_color_hex(night  ? 0x34465f
-                                                : rain ? 0x728e9f
-                                                       : 0x79aec8),
-                                   0);
+    // Solid, scene-specific skies avoid visible RGB565 bands on the small display.
+    lv_obj_set_style_bg_color(root, lv_color_hex(night ? 0x20334b : rain ? 0x546d80 : 0x518fac), 0);
     lv_label_set_text(city,
                       preview ? "天气效果预览" : (s->weather_city[0] ? s->weather_city : "中山"));
     lv_obj_set_x(city, preview ? 64 : 20);

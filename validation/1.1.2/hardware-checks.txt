@@ -1,0 +1,5 @@
+Device information page reports 1.1.2.
+Six requested pages captured from final firmware.
+Music, tiles and USB: tap (50,36) returns to menu.
+Final page: home.
+No NVS erase or SD writes.

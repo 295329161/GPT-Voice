@@ -1,4 +1,5 @@
 #include "shell.h"
+#include "ui_style.h"
 #include "assets/ui_art.h"
 #include "esp_app_desc.h"
 #include "core/terminal.h"
@@ -153,11 +154,9 @@ lv_obj_t *ui_label(lv_obj_t *p, const char *s, int x, int y, int width) {
 }
 lv_obj_t *ui_button(lv_obj_t *p, const char *s, int x, int y, int w, lv_event_cb_t cb, void *data) {
     lv_obj_t *b = lv_btn_create(p);
+    ui_style_button(b);
     lv_obj_set_pos(b, x, y);
     lv_obj_set_size(b, w, 30);
-    lv_obj_set_style_bg_color(b, lv_color_hex(0x24364d), 0);
-    lv_obj_set_style_radius(b, 8, 0);
-    lv_obj_set_style_shadow_width(b, 0, 0);
     lv_obj_t *l = lv_label_create(b);
     lv_label_set_text(l, s);
     lv_obj_center(l);
@@ -165,21 +164,52 @@ lv_obj_t *ui_button(lv_obj_t *p, const char *s, int x, int y, int w, lv_event_cb
         lv_obj_add_event_cb(b, cb, LV_EVENT_CLICKED, data);
     return b;
 }
-/* The visible button is also its entire hit area: never overlap page controls. */
-lv_obj_t *ui_back_button(lv_obj_t *parent, lv_event_cb_t cb) {
+lv_obj_t *ui_text_button(lv_obj_t *parent, const char *text, int x, int y, int width,
+                         lv_event_cb_t cb, void *data) {
+    lv_obj_t *b = ui_button(parent, text, x, y, width, cb, data);
+    ui_style_ghost(b, UI_ACCENT);
+    return b;
+}
+/* A 54x40 target without a permanent button background; artwork is only 8x16. */
+lv_obj_t *ui_back_button(lv_obj_t *parent, lv_event_cb_t cb, uint32_t color) {
     lv_obj_t *b = ui_button(parent, "", 2, 0, 54, cb, NULL);
     lv_obj_set_height(b, 40);
-    lv_obj_set_style_pad_all(b, 0, 0);
-    lv_obj_clear_flag(b, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_set_style_bg_color(b, lv_color_hex(0x385570), LV_STATE_PRESSED);
-    static const lv_point_t points[] = {{31,10},{21,20},{31,30}};
+    ui_style_ghost(b, color);
+    static const lv_point_t points[] = {{30,12},{22,20},{30,28}};
     lv_obj_t *arrow = lv_line_create(b);
     lv_line_set_points(arrow, points, 3);
-    lv_obj_set_style_line_width(arrow, 4, 0);
-    lv_obj_set_style_line_color(arrow, lv_color_hex(0xe2f2ff), 0);
+    lv_obj_set_style_line_width(arrow, 2, 0);
+    lv_obj_set_style_line_color(arrow, lv_color_hex(color), 0);
     lv_obj_set_style_line_rounded(arrow, true, 0);
     lv_obj_clear_flag(arrow, LV_OBJ_FLAG_CLICKABLE);
     return b;
+}
+static void home_button(lv_obj_t *parent) {
+    lv_obj_t *b = ui_button(parent, "", 240, 0, 44, navigate, (void *)HOME);
+    lv_obj_set_height(b, 40);
+    ui_style_ghost(b, UI_TEXT);
+    static const lv_point_t roof[] = {{12,20},{22,11},{32,20}};
+    static const lv_point_t house[] = {{15,19},{15,29},{29,29},{29,19}};
+    static const lv_point_t door[] = {{20,29},{20,23},{24,23},{24,29}};
+    const lv_point_t *paths[] = {roof, house, door};
+    for (int i = 0; i < 3; i++) {
+        lv_obj_t *line = lv_line_create(b);
+        lv_line_set_points(line, paths[i], i ? 4 : 3);
+        lv_obj_set_style_line_width(line, 2, 0);
+        lv_obj_set_style_line_color(line, lv_color_hex(UI_TEXT), 0);
+        lv_obj_set_style_line_rounded(line, true, 0);
+        lv_obj_clear_flag(line, LV_OBJ_FLAG_CLICKABLE);
+    }
+}
+static void row_arrow(lv_obj_t *parent, int x, int y) {
+    static const lv_point_t points[] = {{0,0},{5,5},{0,10}};
+    lv_obj_t *line = lv_line_create(parent);
+    lv_line_set_points(line, points, 3);
+    lv_obj_set_pos(line, x, y);
+    lv_obj_set_style_line_color(line, lv_color_hex(UI_MUTED), 0);
+    lv_obj_set_style_line_width(line, 2, 0);
+    lv_obj_set_style_line_rounded(line, true, 0);
+    lv_obj_clear_flag(line, LV_OBJ_FLAG_CLICKABLE);
 }
 static void back(lv_event_t *e) {
     navigation_notice_generation = snapshot->notice_generation;
@@ -218,6 +248,11 @@ static lv_obj_t *input(const char *hint, int y, int max, bool secret) {
     lv_obj_t *o = lv_textarea_create(content);
     lv_obj_set_pos(o, 0, y);
     lv_obj_set_size(o, 294, 37);
+    ui_style_panel(o);
+    lv_obj_set_style_bg_color(o, lv_color_hex(UI_RAISED), 0);
+    lv_obj_set_style_border_width(o, 1, LV_STATE_FOCUSED);
+    lv_obj_set_style_border_color(o, lv_color_hex(UI_ACCENT), LV_STATE_FOCUSED);
+    lv_obj_set_style_text_color(o, lv_color_hex(UI_MUTED), LV_PART_TEXTAREA_PLACEHOLDER);
     lv_textarea_set_one_line(o, true);
     lv_textarea_set_max_length(o, max);
     lv_textarea_set_placeholder_text(o, hint);
@@ -266,9 +301,8 @@ static void menu_create(void) {
         lv_obj_set_height(b, 86);
         lv_obj_set_style_pad_all(b, 0, 0);
         lv_obj_set_style_radius(b, 16, 0);
-        lv_obj_set_style_bg_color(b, lv_color_hex(0x1b2b40), 0);
-        lv_obj_set_style_bg_grad_color(b, lv_color_hex(0x243d53), 0);
-        lv_obj_set_style_bg_grad_dir(b, LV_GRAD_DIR_VER, 0);
+        ui_style_panel(b);
+        lv_obj_set_style_radius(b, 16, 0);
         if (registry[i]->draw_icon) registry[i]->draw_icon(b);
         else {
             lv_obj_t *icon = ui_label(b, registry[i]->icon, 0, 5, 148);
@@ -293,8 +327,20 @@ static void menu_create(void) {
 static void settings_page(void) {
     const char *names[] = {"显示亮度", "声音音量",       "Wi-Fi 连接", "蓝牙扫描与配对",
                            "天气城市", "网页与语音配置", "设备信息"};
-    for (int i = 0; i < 7; i++)
-        ui_button(content, names[i], 0, i * 39, 294, navigate, (void *)(intptr_t)(DISPLAY + i));
+    const char *icons[] = {LV_SYMBOL_IMAGE, LV_SYMBOL_VOLUME_MID, LV_SYMBOL_WIFI,
+        LV_SYMBOL_BLUETOOTH, LV_SYMBOL_HOME, LV_SYMBOL_EDIT, LV_SYMBOL_SETTINGS};
+    for (int i = 0; i < 7; i++) {
+        lv_obj_t *b = ui_button(content, "", 0, i * 49, 294, navigate, (void *)(intptr_t)(DISPLAY + i));
+        lv_obj_set_height(b, 43);
+        ui_style_panel(b);
+        lv_obj_t *mark = decoration(b, 10, 7, 29, 29, UI_RAISED, 9);
+        lv_obj_t *icon = ui_label(mark, icons[i], 0, 0, 29);
+        lv_obj_set_style_text_color(icon, lv_color_hex(UI_ACCENT), 0);
+        lv_obj_set_style_text_align(icon, LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_center(icon);
+        ui_label(b, names[i], 51, 13, 216);
+        row_arrow(b, 274, 16);
+    }
 }
 static void slider_changed(lv_event_t *e) {
     int target = (intptr_t)lv_event_get_user_data(e);
@@ -304,15 +350,26 @@ static void slider_changed(lv_event_t *e) {
     terminal_submit(JOB_LEVELS, b, NULL, target);
 }
 static void level_page(bool sound) {
-    ui_label(content, sound ? "扬声器音量" : "屏幕亮度", 4, 12, 290);
+    lv_obj_t *caption = ui_label(content, sound ? "扬声器音量" : "屏幕亮度", 0, 8, 294);
+    lv_obj_set_style_text_color(caption, lv_color_hex(UI_MUTED), 0);
+    lv_obj_set_style_text_align(caption, LV_TEXT_ALIGN_CENTER, 0);
+    info = ui_label(content, "", 0, 36, 294);
+    lv_obj_set_style_text_font(info, &lv_font_montserrat_48, 0);
+    lv_obj_set_style_text_align(info, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_t *s = lv_slider_create(content);
-    lv_obj_set_pos(s, 15, 70);
-    lv_obj_set_size(s, 265, 18);
+    lv_obj_set_pos(s, 15, 122);
+    lv_obj_set_size(s, 265, 5);
+    ui_style_slider(s);
     lv_slider_set_range(s, sound ? 0 : 5, sound ? 90 : 100);
     lv_slider_set_value(s, sound ? config.volume : config.brightness, LV_ANIM_OFF);
     lv_obj_add_event_cb(s, slider_changed, LV_EVENT_RELEASED, (void *)(intptr_t)sound);
-    info = ui_label(content, "", 4, 110, 290);
+    lv_obj_t *low = ui_label(content, sound ? "0" : "5", 15, 145, 60);
+    lv_obj_set_style_text_color(low, lv_color_hex(UI_MUTED), 0);
+    lv_obj_t *high = ui_label(content, sound ? "90" : "100", 220, 145, 60);
+    lv_obj_set_style_text_color(high, lv_color_hex(UI_MUTED), 0);
+    lv_obj_set_style_text_align(high, LV_TEXT_ALIGN_RIGHT, 0);
 }
+
 static void wifi_connect(lv_event_t *e) {
     terminal_submit(JOB_WIFI_CONNECT, lv_textarea_get_text(edit_a), lv_textarea_get_text(edit_b),
                     1);
@@ -324,13 +381,14 @@ static void wifi_select(lv_event_t *e) {
         lv_textarea_set_text(edit_a, snapshot->wifi_names[i]);
 }
 static void wifi_page(void) {
-    ui_button(content, "扫描", 0, 0, 80, action, (void *)JOB_WIFI_SCAN);
-    ui_button(content, "连接", 88, 0, 80, wifi_connect, NULL);
+    ui_text_button(content, "扫描", 0, 0, 80, action, (void *)JOB_WIFI_SCAN);
+    ui_style_primary(ui_button(content, "连接", 88, 0, 80, wifi_connect, NULL));
     info = ui_label(content, "", 177, 4, 122);
     edit_a = input("SSID", 38, 32, false);
     edit_b = input("密码（当前网络留空保留）", 81, 63, true);
     lv_textarea_set_text(edit_a, config.ssid);
     list = lv_list_create(content);
+    ui_style_list(list);
     lv_obj_set_pos(list, 0, 124);
     lv_obj_set_size(list, 294, 160);
     wifi_generation = ~0u;
@@ -340,9 +398,10 @@ static void ble_select(lv_event_t *e) {
     terminal_submit(JOB_BLE_PAIR, NULL, NULL, (intptr_t)lv_event_get_user_data(e));
 }
 static void ble_page(void) {
-    ui_button(content, "扫描 BLE", 0, 0, 118, action, (void *)JOB_BLE_SCAN);
+    ui_text_button(content, "扫描 BLE", 0, 0, 118, action, (void *)JOB_BLE_SCAN);
     info = ui_label(content, "", 0, 38, 294);
     list = lv_list_create(content);
+    ui_style_list(list);
     lv_obj_set_pos(list, 0, 85);
     lv_obj_set_size(list, 294, 190);
     ble_generation = ~0u;
@@ -361,17 +420,20 @@ static void weather_preview_page(void) {
     preview_scene = 0;
     preview_night = false;
     weather_view_create(content);
-    ui_back_button(screen, back);
-    ui_button(content, "切换天气", 16, 196, 140, preview_change, NULL);
-    ui_button(content, "切换昼夜", 164, 196, 140, preview_change, (void *)1);
+    ui_back_button(screen, back, UI_TEXT);
+    for (int i = 0; i < 2; i++) {
+        lv_obj_t *b = ui_button(content, i ? "切换昼夜" : "切换天气", 16 + i * 148, 196, 140, preview_change, (void *)(intptr_t)i);
+        ui_style_ghost(b, UI_TEXT);
+        lv_obj_set_style_bg_opa(b, LV_OPA_20, 0);
+    }
     weather_view_preview(snapshot, preview_codes[preview_scene], preview_night);
 }
 static void weather_page(void) {
     ui_label(content, "输入城市中文名或拼音", 0, 0, 294);
     edit_a = input("例如 Shanghai", 36, 79, false);
     lv_textarea_set_text(edit_a, config.city);
-    ui_button(content, "查找并保存", 0, 85, 150, city_save, NULL);
-    ui_button(content, "效果预览", 160, 85, 134, navigate, (void *)WEATHER_PREVIEW);
+    ui_style_primary(ui_button(content, "查找并保存", 0, 85, 150, city_save, NULL));
+    ui_text_button(content, "效果预览", 160, 85, 134, navigate, (void *)WEATHER_PREVIEW);
     ui_label(
         content,
         "数据来自 Open-Meteo\n每 15 分钟更新，断网保留缓存。\n同名城市请在网页中使用更明确的名称。",
@@ -403,13 +465,16 @@ static void games_page(void) {
         lv_obj_set_height(b, 45);
         lv_obj_set_style_pad_all(b, 0, 0);
         lv_obj_set_style_radius(b, 12, 0);
+        ui_style_panel(b);
         app_art(b, art[i], 9, 2);
+        row_arrow(b, 274, 17);
         ui_label(b, names[i], 70, 13, 194);
     }
     ui_label(content, "体感灵敏度", 0, 160, 115);
     lv_obj_t *s = lv_slider_create(content);
     lv_obj_set_pos(s, 134, 168);
-    lv_obj_set_size(s, 145, 10);
+    lv_obj_set_size(s, 145, 5);
+    ui_style_slider(s);
     lv_slider_set_range(s, 1, 5);
     lv_slider_set_value(s, config.sensitivity, LV_ANIM_OFF);
     lv_obj_add_event_cb(s, slider_changed, LV_EVENT_RELEASED, (void *)2);
@@ -455,9 +520,11 @@ static void voice_page(void) {
     voice_dragging = false;
     voice_show_sources = false;
     info = ui_label(content, "正在连接...", 0, 0, 174);
-    voice_sources_button = ui_button(content, "来源", 180, 0, 54, voice_sources_toggle, NULL);
-    ui_button(content, "最新", 240, 0, 54, voice_latest, NULL);
+    voice_sources_button = ui_text_button(content, "来源", 180, 0, 54, voice_sources_toggle, NULL);
+    ui_text_button(content, "最新", 240, 0, 54, voice_latest, NULL);
     list = lv_obj_create(content);
+    ui_style_panel(list);
+    lv_obj_set_style_pad_all(list, 16, 0);
     lv_obj_set_pos(list, 0, 38);
     lv_obj_set_size(list, 294, 147);
     lv_obj_set_scroll_dir(list, LV_DIR_VER);
@@ -469,7 +536,11 @@ static void voice_page(void) {
 }
 static void ha_page(void) {
     app_art(content, &art_icon_home, 112, 12);
-    ui_label(content, "Home Assistant\n开发中", 55, 83, 230);
+    lv_obj_t *name = ui_label(content, "Home Assistant", 0, 86, 294);
+    lv_obj_set_style_text_align(name, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_t *hint = ui_label(content, "开发中", 0, 116, 294);
+    lv_obj_set_style_text_color(hint, lv_color_hex(UI_MUTED), 0);
+    lv_obj_set_style_text_align(hint, LV_TEXT_ALIGN_CENTER, 0);
 }
 static void file_select(lv_event_t *e) {
     if (lv_event_get_code(e) == LV_EVENT_CLICKED && file_held) {
@@ -555,14 +626,15 @@ static void delete_ask(lv_event_t *e) {
     ui_button(content, "取消", 154, 122, 140, navigate, (void *)FILES);
 }
 static void files_page(void) {
-    ui_button(content, "挂载", 0, 0, 66, action, (void *)JOB_MOUNT);
-    ui_button(content, "卸载", 73, 0, 66, action, (void *)JOB_EJECT);
-    ui_button(content, "上级", 146, 0, 66, up, NULL);
-    ui_button(content, "刷新", 219, 0, 73, refresh_files, NULL);
+    ui_text_button(content, "挂载", 0, 0, 66, action, (void *)JOB_MOUNT);
+    ui_text_button(content, "卸载", 73, 0, 66, action, (void *)JOB_EJECT);
+    ui_text_button(content, "上级", 146, 0, 66, up, NULL);
+    ui_text_button(content, "刷新", 219, 0, 73, refresh_files, NULL);
     info = ui_label(content, "", 0, 37, 294);
     lv_label_set_long_mode(info, LV_LABEL_LONG_DOT);
     lv_obj_set_height(info, 18);
     list = lv_list_create(content);
+    ui_style_list(list);
     lv_obj_set_pos(list, 0, 61);
     lv_obj_set_size(list, 294, 160);
     ui_button(content, "新建文件夹", 0, 228, 142, name_dialog, (void *)JOB_MKDIR);
@@ -698,12 +770,13 @@ static void render(int page) {
     }
     info = list = picture = NULL;
     bool game = page == SHOOTER || page == TILES || page == FLOOD;
-    heading = ui_label(screen, "", 64, 12, 175);
+    heading = ui_label(screen, "", 58, 12, 182);
+    lv_obj_set_style_text_align(heading, LV_TEXT_ALIGN_CENTER, 0);
     game_bar = screen;
     if (page != HOME && page != WEATHER_PREVIEW && page != MUSIC) {
-        ui_back_button(screen, back);
+        ui_back_button(screen, back, UI_TEXT);
         if (!game)
-            ui_button(screen, LV_SYMBOL_HOME, 244, 3, 34, navigate, (void *)HOME);
+            home_button(screen);
     }
     content = lv_obj_create(screen);
     lv_obj_remove_style_all(content);
@@ -724,9 +797,9 @@ static void render(int page) {
     }
     lv_obj_set_scroll_dir(content, LV_DIR_VER);
     lv_obj_set_style_text_font(content, &font, 0);
-    lv_obj_set_style_text_color(content, lv_color_hex(0xe6edf7), 0);
+    lv_obj_set_style_text_color(content, lv_color_hex(UI_TEXT), 0);
     notice = ui_label(screen, "", 5, 222, 310);
-    lv_obj_set_style_bg_color(notice, lv_color_hex(0x101827), 0);
+    lv_obj_set_style_bg_color(notice, lv_color_hex(UI_BG), 0);
     lv_obj_set_style_bg_opa(notice, 255, 0);
     lv_obj_set_style_text_color(notice, lv_color_hex(0xa7bed8), 0);
     lv_label_set_long_mode(notice, LV_LABEL_LONG_DOT);
@@ -857,7 +930,7 @@ static void tick(lv_timer_t *timer) {
     if (active == WEATHER_PREVIEW)
         weather_view_preview(snapshot, preview_codes[preview_scene], preview_night);
     if (active == DISPLAY || active == SOUND) {
-        snprintf(text, sizeof(text), "当前：%d",
+        snprintf(text, sizeof(text), "%d%%",
                  active == DISPLAY ? config.brightness : config.volume);
         lv_label_set_text(info, text);
     }
@@ -876,6 +949,7 @@ static void tick(lv_timer_t *timer) {
                 file_entry_t *f = &snapshot->files[i];
                 lv_obj_t *b = lv_list_add_btn(
                     list, f->directory ? LV_SYMBOL_DIRECTORY : LV_SYMBOL_FILE, f->name);
+                ui_style_list_item(b);
                 lv_obj_add_event_cb(b, file_select, LV_EVENT_ALL, (void *)(intptr_t)i);
             }
         }
@@ -887,6 +961,7 @@ static void tick(lv_timer_t *timer) {
             lv_obj_clean(list);
             for (int i = 0; i < snapshot->wifi_count; i++) {
                 lv_obj_t *b = lv_list_add_btn(list, LV_SYMBOL_WIFI, snapshot->wifi_names[i]);
+                ui_style_list_item(b);
                 lv_obj_add_event_cb(b, wifi_select, LV_EVENT_CLICKED, (void *)(intptr_t)i);
             }
         }
@@ -900,6 +975,7 @@ static void tick(lv_timer_t *timer) {
                 snprintf(text, sizeof(text), "%s  %d dBm", snapshot->devices[i].name,
                          snapshot->devices[i].rssi);
                 lv_obj_t *b = lv_list_add_btn(list, LV_SYMBOL_BLUETOOTH, text);
+                ui_style_list_item(b);
                 lv_obj_add_event_cb(b, ble_select, LV_EVENT_CLICKED, (void *)(intptr_t)i);
             }
         }
@@ -949,12 +1025,12 @@ void shell_init(void) {
     snapshot = heap_caps_calloc(1, sizeof(*snapshot), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     assert(snapshot);
     lv_theme_t *theme =
-        lv_theme_default_init(lv_disp_get_default(), lv_palette_main(LV_PALETTE_BLUE),
-                              lv_palette_main(LV_PALETTE_TEAL), true, &font);
+        lv_theme_default_init(lv_disp_get_default(), lv_color_hex(UI_ACCENT),
+                              lv_color_hex(UI_MUTED), true, &font);
     lv_disp_set_theme(lv_disp_get_default(), theme);
     screen = lv_scr_act();
-    lv_obj_set_style_bg_color(screen, lv_color_hex(0x101827), 0);
-    lv_obj_set_style_text_color(screen, lv_color_hex(0xe6edf7), 0);
+    lv_obj_set_style_bg_color(screen, lv_color_hex(UI_BG), 0);
+    lv_obj_set_style_text_color(screen, lv_color_hex(UI_TEXT), 0);
     lv_obj_set_style_text_font(screen, &font, 0);
     lv_obj_clear_flag(screen, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_event_cb(screen, gesture, LV_EVENT_GESTURE, NULL);

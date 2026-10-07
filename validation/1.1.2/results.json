@@ -1,0 +1,43 @@
+{
+  "version": "1.1.2",
+  "date": "2026-10-08",
+  "firmware": [
+    {
+      "file": "firmware.bin",
+      "bytes": 3982080,
+      "sha256": "684852d5ba2b446e405f5abf2d846fad566dbcc0b775a286a1e5c00f83db8ace"
+    },
+    {
+      "file": "bootloader.bin",
+      "bytes": 21088,
+      "sha256": "6eb7cf3c6ddec6e328efe26afd6e467338c8a66f6d13fb1587a9b3ad3d0b0c4d"
+    },
+    {
+      "file": "partitions.bin",
+      "bytes": 3072,
+      "sha256": "ef38c1c8bdb24a2006840e0b411327c92ac382d3138835ada6b6a8448d0db3a7"
+    }
+  ],
+  "checks": {
+    "build": "pass",
+    "flash_write_hash": "pass",
+    "device_version": "1.1.2",
+    "host_c_cpp_sanitizer_suites": 14,
+    "python_test_cases": 2,
+    "screenshot_pages": [
+      "home",
+      "menu-1",
+      "menu-2",
+      "music",
+      "tiles",
+      "usb"
+    ],
+    "expanded_back_target": "pass_music_tiles_usb_at_50_36",
+    "partition_unchanged": true
+  },
+  "final_page": "home",
+  "limits": [
+    "LVGL pointer injection does not replace physical touch assessment",
+    "Voice and USB full end-to-end regressions not repeated"
+  ]
+}

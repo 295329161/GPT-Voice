@@ -18,27 +18,27 @@
 
 ## 实机界面
 
-以下为 **v1.1.1 设备实际帧缓冲截图**，原始分辨率 320 × 240。天气图为效果预览，音乐图为待选曲状态。
+以下为 **v1.1.2 设备实际帧缓冲截图**，原始分辨率 320 × 240。主界面显示拍摄时的时间与天气，音乐页为待选曲状态。
 
-<p align="center"><strong>应用菜单 · 两页八个入口</strong></p>
+<p align="center"><strong>主界面 · 应用菜单（一）</strong></p>
 <p align="center">
-  <img src="validation/1.1.1/screenshots/menu-1.png" width="46%" alt="v1.1.1 菜单第一页：GPT Voice、音乐、游戏、图片">
+  <img src="validation/1.1.2/screenshots/home.png" width="46%" alt="主界面：真实时间与天气">
   &nbsp;
-  <img src="validation/1.1.1/screenshots/menu-2.png" width="46%" alt="v1.1.1 菜单第二页：设置、文件管理、USB 传文件、Home Assistant">
+  <img src="validation/1.1.2/screenshots/menu-1.png" width="46%" alt="应用菜单第一页：GPT Voice、音乐、游戏、图片">
 </p>
 
-<p align="center"><strong>音乐播放器 · 三个小游戏</strong></p>
+<p align="center"><strong>应用菜单（二） · 音乐播放器</strong></p>
 <p align="center">
-  <img src="validation/1.1.1/screenshots/music.png" width="46%" alt="音乐播放器：选曲、播放控制与音量">
+  <img src="validation/1.1.2/screenshots/menu-2.png" width="46%" alt="应用菜单第二页：设置、文件管理、USB 传文件、Home Assistant">
   &nbsp;
-  <img src="validation/1.1.1/screenshots/games.png" width="46%" alt="游戏入口：雷电突击、羊了个羊、Color Flood">
+  <img src="validation/1.1.2/screenshots/music.png" width="46%" alt="音乐播放器：浅色界面与无底色返回按钮">
 </p>
 
-<p align="center"><strong>USB 传文件 · 动态天气预览</strong></p>
+<p align="center"><strong>羊了个羊 · USB 传文件</strong></p>
 <p align="center">
-  <img src="validation/1.1.1/screenshots/usb.png" width="46%" alt="USB 传文件：连接电脑与开启传输入口">
+  <img src="validation/1.1.2/screenshots/tiles.png" width="46%" alt="羊了个羊：层叠三消与七格暂存槽">
   &nbsp;
-  <img src="validation/1.1.1/screenshots/weather-preview.png" width="46%" alt="天气效果预览：晴天、时间与温度">
+  <img src="validation/1.1.2/screenshots/usb.png" width="46%" alt="USB 传文件：连接电脑与开启传输入口">
 </p>
 
 ## 可以做什么
@@ -50,21 +50,21 @@
 
 > Home Assistant 目前为“开发中”预留入口，尚不提供设备控制。BLE 支持扫描与基础连接，不支持经典蓝牙音箱。
 
-## v1.1.1 更新
+## v1.1.2 更新
 
-统一应用图标，为三个游戏增加独立图标；设置采用金属齿轮，Home Assistant 采用青蓝色房屋。返回按钮扩大到 **54 × 40**，点击面积达到原来的 **2.25 倍**，并调整相关页面布局。
+返回与主页采用**无底色细线图标**，按页面明暗适配颜色，并保留 **54 × 40** 的返回点击区域。音乐页恢复浅色导航；菜单、设置、游戏、文件和 USB 统一卡片与控件样式。亮度与音量页突出百分比，天气背景消除色带。
 
-[完整更新记录](docs/RELEASE.md) · [本轮验证与边界](docs/VALIDATION_UI.md)
+[完整更新记录](docs/RELEASE.md) · [本轮验证与边界](docs/VALIDATION_1_1_2.md)
 
 ## 快速开始
 
 1. **准备硬件**：立创实战派 ESP32-S3 V1.0.1，16 MB Flash / 8 MB PSRAM，以及支持数据传输的 USB 线。音乐、图片和 USB 文件传输需要 SD 卡。
-2. **下载并烧录**：前往 [Releases](https://github.com/295329161/GPT-Voice/releases)，下载完整发布包，按照包内 `FLASHING.md` 操作。也提供三个 BIN 文件独立下载；相同分区布局升级保留配置，**不要执行 `erase_flash`**。
+2. **下载并烧录**：前往 [Releases](https://github.com/295329161/GPT-Voice/releases)，下载同一版本的 `firmware.bin`、`bootloader.bin`、`partitions.bin`，按照[烧录说明](docs/FLASHING.md)操作。相同分区布局升级保留配置，**不要执行 `erase_flash`**。
 3. **连接与配置**：在设备“设置”中连接 Wi-Fi；需要语音时，按下方步骤在本地网页填写服务配置。音乐与图片分别放入 SD 卡的 `/Music`、`/Pictures` 目录。
 
-**版本下载**：[v1.1.1 · 当前版本](https://github.com/295329161/GPT-Voice/releases/tag/v1.1.1) · [v1.1.0 · USB 传文件](https://github.com/295329161/GPT-Voice/releases/tag/v1.1.0) · [v1.0.0 · 首个完整版本](https://github.com/295329161/GPT-Voice/releases/tag/v1.0.0)
+**版本下载**：[v1.1.2 · 当前版本](https://github.com/295329161/GPT-Voice/releases/tag/v1.1.2) · [v1.1.1 · 图标优化](https://github.com/295329161/GPT-Voice/releases/tag/v1.1.1) · [v1.1.0 · USB 传文件](https://github.com/295329161/GPT-Voice/releases/tag/v1.1.0) · [v1.0.0 · 首个完整版本](https://github.com/295329161/GPT-Voice/releases/tag/v1.0.0)
 
-每个 Release 都保留对应的固件 BIN、完整发布包、SHA-256 校验文件和源码标签。
+每个 Release 仅上传对应的三个固件 BIN，SHA-256 写在版本说明中；所有历史标签与源码记录保留。
 
 <details>
 <summary><strong>展开完整功能说明与操作细节</strong></summary>
@@ -90,7 +90,7 @@
 4. Step Plan 新闻/资料查询走官方 StepSearch MCP，沿用已有阶跃密钥。Tavily 是单独提供 Key 后启用的备用工具。第三方 API 使用按供应商规则计费。
 5. 默认要求两三句、60 个汉字以内；新闻先概括两条重点，用户追问后再展开。网址放在“来源”页，语音不朗读来源清单。此长度是模型指令，不截断音频句子。无可核验结果时明确说明，日期与星期的明确问句直接读取校准时钟。
 
-配置网页 10 分钟后关闭，提交必须携带配对码。只在可信局域网开启。个人设备固件未启用 Flash 加密、安全启动或 OTA；发布包不包含 NVS 与任何密钥。实际联网能力依赖账户、网络和供应商接口。
+配置网页 10 分钟后关闭，提交必须携带配对码。只在可信局域网开启。个人设备固件未启用 Flash 加密、安全启动或 OTA；发布固件不包含 NVS 与任何密钥。实际联网能力依赖账户、网络和供应商接口。
 
 ## 开发与烧录
 
@@ -105,12 +105,12 @@ python3 scripts/device_console.py artifacts/device-session
 
 构建脚本处理项目路径中的空格，产物在 `.pio/build/szp_s3/`，临时日志在 `artifacts/`。`flash-usb` 优先使用原生 USB，缺失时回退独立 CH340；`flash` 直接使用 CH340。USB 传输仍开启时脚本拒绝复位烧录，请先安全弹出。串口路径在 `platformio.ini` 和脚本中可调整。串口工具支持 `status`、`ui`、`page N`、`tap X Y`、`swipe X Y X2 Y2`，`:shot name` 保存 PNG，`:quit` 退出且不复位设备。不要同时打开多个串口读者。
 
-发布包附有分区表、bootloader、应用固件和校验清单。相同分区布局升级不擦除 NVS，保留 Wi-Fi/API 配置；不要执行 `erase_flash`。该分区布局不适用于其他板型。
+Releases 提供分区表、bootloader 与应用固件，版本说明附 SHA-256。相同分区布局升级不擦除 NVS，保留 Wi-Fi/API 配置；不要执行 `erase_flash`。该分区布局不适用于其他板型。
 
 ## 项目资料
 
 - [版本说明](docs/RELEASE.md)、[1.0.0 基线验证](docs/VALIDATION.md)
-- [1.1.1 界面优化与验证](docs/VALIDATION_UI.md)
+- [1.1.2 界面风格与验证](docs/VALIDATION_1_1_2.md)、[1.1.1 图标优化记录](docs/VALIDATION_UI.md)
 - [1.0.0 页面截图归档](validation/1.0.0/index.html)
 - [USB 功能验证](docs/VALIDATION_USB.md)、[1.1.0 界面截图归档](validation/1.1.0/index.html)
 - [架构与扩展](docs/ARCHITECTURE.md)、[语音维护要求](docs/VOICE_BASELINE.md)

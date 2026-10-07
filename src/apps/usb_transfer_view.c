@@ -1,5 +1,6 @@
 #include "usb_transfer_view.h"
 #include "shell.h"
+#include "ui_style.h"
 #include "services/usb_transfer.h"
 #include <stdio.h>
 
@@ -66,7 +67,7 @@ static void confirm_open(void) {
     lv_obj_set_style_bg_opa(confirmation, LV_OPA_80, 0);
     lv_obj_clear_flag(confirmation, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_event_cb(confirmation, confirmation_deleted, LV_EVENT_DELETE, NULL);
-    lv_obj_t *panel = shape(confirmation, 8, 9, 304, 222, 0x162537, 16);
+    lv_obj_t *panel = shape(confirmation, 8, 9, 304, 222, UI_SURFACE, 18);
     // Labels share the project's CJK font through the current page.
     lv_obj_set_style_text_font(panel, lv_obj_get_style_text_font(shell_content(), 0), 0);
     lv_obj_set_style_text_color(panel, lv_color_hex(0xe6edf7), 0);
@@ -79,7 +80,7 @@ static void confirm_open(void) {
     lv_obj_set_style_text_color(body, lv_color_hex(0xb4c7da), 0);
     ui_button(panel, "取消", 14, 180, 132, confirm_choice, NULL);
     lv_obj_t *yes = ui_button(panel, "确认开启", 156, 180, 132, confirm_choice, (void *)1);
-    lv_obj_set_style_bg_color(yes, lv_color_hex(0x245b70), 0);
+    ui_style_primary(yes);
 }
 static void clicked(lv_event_t *event) {
     (void)event;
@@ -89,10 +90,7 @@ static void clicked(lv_event_t *event) {
 void usb_transfer_view_create(lv_obj_t *parent) {
     lv_obj_clear_flag(parent, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_t *card = shape(parent, 0, 0, 294, 108, 0x193747, 17);
-    lv_obj_set_style_bg_grad_color(card, lv_color_hex(0x172638), 0);
-    lv_obj_set_style_bg_grad_dir(card, LV_GRAD_DIR_HOR, 0);
-    lv_obj_set_style_border_width(card, 1, 0);
-    lv_obj_set_style_border_color(card, lv_color_hex(0x2b4b60), 0);
+    ui_style_panel(card);
     icon(card, 12, 22);
     title = ui_label(card, "连接电脑", 96, 12, 186);
     lv_obj_set_style_text_color(title, lv_color_hex(0xf0f7fc), 0);
@@ -108,7 +106,7 @@ void usb_transfer_view_create(lv_obj_t *parent) {
     action = ui_button(parent, "开启 USB 传输", 0, 146, 294, clicked, NULL);
     lv_obj_set_height(action, 36);
     lv_obj_set_style_radius(action, 11, 0);
-    lv_obj_set_style_bg_color(action, lv_color_hex(0x24546a), 0);
+    ui_style_primary(action);
     action_text = lv_obj_get_child(action, 0);
 }
 void usb_transfer_view_update(const terminal_state_t *s) {

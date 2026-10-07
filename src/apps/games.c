@@ -164,11 +164,11 @@ void games_create(lv_obj_t *parent, lv_obj_t *toolbar, int which) {
     hud = ui_label(toolbar, "", 62, 10, kind == 1 ? 50 : 106);
     lv_label_set_long_mode(hud, LV_LABEL_LONG_CLIP);
     if (kind == 1) {
-        undo_button = ui_button(toolbar, "撤回", 116, 3, 50, undo_cb, NULL);
-        shuffle_button = ui_button(toolbar, "洗牌", 170, 3, 58, shuffle_cb, NULL);
+        undo_button = ui_text_button(toolbar, "撤回", 116, 3, 50, undo_cb, NULL);
+        shuffle_button = ui_text_button(toolbar, "洗牌", 170, 3, 58, shuffle_cb, NULL);
     } else
-        pause_button = ui_button(toolbar, "暂停", 174, 3, 50, pause_cb, NULL);
-    ui_button(toolbar, "重开", 232, 3, 50, reset_cb, NULL);
+        pause_button = ui_text_button(toolbar, "暂停", 174, 3, 50, pause_cb, NULL);
+    ui_text_button(toolbar, "重开", 232, 3, 50, reset_cb, NULL);
     board = rect(parent, 0, 0, ARENA_WIDTH, ARENA_HEIGHT, kind == 1 ? 0xc5debc : 0x0b172b, 12);
     if (kind == 0) {
         for (int i = 0; i < 24; i++) {

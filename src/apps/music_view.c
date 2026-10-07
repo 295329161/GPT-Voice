@@ -1,5 +1,6 @@
 #include "music_view.h"
 #include "shell.h"
+#include "ui_style.h"
 #include "assets/ui_art.h"
 #include "esp_timer.h"
 #include <stdio.h>
@@ -33,9 +34,9 @@ static lv_obj_t *button(lv_obj_t *parent, const char *symbol, int x, int y, int 
     lv_obj_set_pos(o, x, y);
     lv_obj_set_size(o, size, size);
     lv_obj_set_style_radius(o, LV_RADIUS_CIRCLE, 0);
-    lv_obj_set_style_bg_color(o, lv_color_hex(primary ? 0xfa355b : 0xe4d7d9), 0);
+    lv_obj_set_style_bg_color(o, lv_color_hex(primary ? UI_ROSE : UI_PAPER_TEXT), 0);
     lv_obj_set_style_bg_opa(o, primary ? LV_OPA_COVER : LV_OPA_TRANSP, 0);
-    lv_obj_set_style_bg_opa(o, LV_OPA_COVER, LV_STATE_PRESSED);
+    lv_obj_set_style_bg_opa(o, primary ? LV_OPA_80 : LV_OPA_10, LV_STATE_PRESSED);
     lv_obj_add_event_cb(o, cb, LV_EVENT_CLICKED, data);
     lv_obj_t *text = label(o, symbol, 0, 0, size, primary ? 0xffffff : 0x2a2028,
                            primary ? &lv_font_montserrat_24 : &lv_font_montserrat_20);
@@ -58,30 +59,28 @@ static void volume_changed(lv_event_t *e) {
 void music_view_create(lv_obj_t *parent, lv_event_cb_t back, lv_event_cb_t browse) {
     current_path[0] = '\0';
     lv_obj_clear_flag(parent, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_set_style_bg_color(parent, lv_color_hex(0xf9f4f2), 0);
+    lv_obj_set_style_bg_color(parent, lv_color_hex(UI_PAPER), 0);
     lv_obj_set_style_bg_grad_color(parent, lv_color_hex(0xefdee2), 0);
-    lv_obj_set_style_bg_grad_dir(parent, LV_GRAD_DIR_VER, 0);
+    lv_obj_set_style_bg_grad_dir(parent, LV_GRAD_DIR_NONE, 0);
     lv_obj_set_style_bg_opa(parent, LV_OPA_COVER, 0);
 
-    ui_back_button(parent, back);
+    ui_back_button(parent, back, UI_PAPER_TEXT);
     heading = label(parent, "音乐", 94, 11, 132, 0x33242e, NULL);
     lv_obj_set_style_text_align(heading, LV_TEXT_ALIGN_CENTER, 0);
-    button(parent, LV_SYMBOL_LIST, 247, 0, 38, browse, NULL, false);
+    button(parent, LV_SYMBOL_LIST, 244, 0, 40, browse, NULL, false);
 
-    lv_obj_t *cover = shape(parent, 18, 49, 120, 0xf76580, 12);
-    lv_obj_set_style_bg_grad_color(cover, lv_color_hex(0xb9204a), 0);
-    lv_obj_set_style_bg_grad_dir(cover, LV_GRAD_DIR_VER, 0);
-    lv_obj_set_style_shadow_color(cover, lv_color_hex(0x9d3654), 0);
-    lv_obj_set_style_shadow_width(cover, 15, 0);
-    lv_obj_set_style_shadow_opa(cover, 55, 0);
-    lv_obj_set_style_shadow_ofs_y(cover, 5, 0);
+    lv_obj_t *cover = shape(parent, 18, 49, 120, UI_ROSE, 18);
+    lv_obj_set_style_shadow_color(cover, lv_color_hex(0x804358), 0);
+    lv_obj_set_style_shadow_width(cover, 12, 0);
+    lv_obj_set_style_shadow_opa(cover, 25, 0);
+    lv_obj_set_style_shadow_ofs_y(cover, 4, 0);
     lv_obj_set_style_clip_corner(cover, true, 0);
-    lv_obj_t *halo = shape(cover, 48, -26, 100, 0xffbac9, LV_RADIUS_CIRCLE);
-    lv_obj_set_style_bg_opa(halo, 35, 0);
-    halo = shape(cover, -28, 77, 95, 0x7b1637, LV_RADIUS_CIRCLE);
-    lv_obj_set_style_bg_opa(halo, 28, 0);
-    lv_obj_t *note = lv_img_create(cover);
-    lv_img_set_src(note, &art_icon_music);
+    lv_obj_t *halo = shape(cover, 55, -30, 100, 0xffd9e2, LV_RADIUS_CIRCLE);
+    lv_obj_set_style_bg_opa(halo, 25, 0);
+    halo = shape(cover, -30, 80, 90, 0x8c3c5a, LV_RADIUS_CIRCLE);
+    lv_obj_set_style_bg_opa(halo, 25, 0);
+    lv_obj_t *note = label(cover, LV_SYMBOL_AUDIO, 0, 0, 100, 0xfff5f7, &lv_font_montserrat_48);
+    lv_obj_set_style_text_align(note, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_center(note);
 
     title = label(parent, "选择一首音乐", 155, 59, 148, 0x241c24, NULL);
