@@ -75,7 +75,7 @@ static void tiles_refresh(void) {
     snprintf(count_text, sizeof(count_text), "洗牌%d", garden.shuffles);
     lv_label_set_text(lv_obj_get_child(shuffle_button, 0), count_text);
     char text[64];
-    snprintf(text, sizeof(text), "%d / 12 组", garden.matches);
+    snprintf(text, sizeof(text), "%d/12", garden.matches);
     lv_label_set_text(hud, text);
     visible(banner, garden.won || garden.lost);
     lv_label_set_text(banner, garden.won ? "全部消除！" : "槽位已满 / 可撤回或重开");
@@ -161,7 +161,7 @@ static void flood_cb(lv_event_t *e) {
 void games_create(lv_obj_t *parent, lv_obj_t *toolbar, int which) {
     kind = which;
     lv_obj_clear_flag(parent, LV_OBJ_FLAG_SCROLLABLE);
-    hud = ui_label(toolbar, "", 42, 10, kind == 1 ? 70 : 126);
+    hud = ui_label(toolbar, "", 62, 10, kind == 1 ? 50 : 106);
     lv_label_set_long_mode(hud, LV_LABEL_LONG_CLIP);
     if (kind == 1) {
         undo_button = ui_button(toolbar, "撤回", 116, 3, 50, undo_cb, NULL);

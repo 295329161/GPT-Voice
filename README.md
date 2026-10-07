@@ -1,4 +1,4 @@
-# GPT Voice 1.1.0
+# GPT Voice 1.1.1
 
 立创实战派 ESP32-S3 V1.0.1 桌面终端，16 MB Flash / 8 MB PSRAM，320×240 横屏。基于 PlatformIO、ESP-IDF 5.5、LVGL 8.3。
 
@@ -42,6 +42,7 @@ python3 scripts/device_console.py artifacts/device-session
 ## 项目资料
 
 - [版本说明](docs/RELEASE.md)、[本次验证及边界](docs/VALIDATION.md)
+- [1.1.1 界面优化与验证](docs/VALIDATION_UI.md)
 - [全部页面截图](validation/1.0.0/index.html)
 - [USB 功能验证](docs/VALIDATION_USB.md)、[新增界面截图](validation/1.1.0/index.html)
 - [架构与扩展](docs/ARCHITECTURE.md)、[语音维护要求](docs/VOICE_BASELINE.md)

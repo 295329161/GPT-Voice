@@ -1,0 +1,8 @@
+GPT Voice 1.1.1
+Command: bash dev.sh flash-usb
+RAM:   [==        ]  22.0% (used 72180 bytes from 327680 bytes)
+Flash: [====      ]  38.0% (used 3980301 bytes from 10485760 bytes)
+Hash of data verified.
+Hash of data verified.
+Hash of data verified.
+========================= [SUCCESS] Took 81.71 seconds =========================

@@ -100,7 +100,8 @@ static void update(const terminal_state_t *s, int preview_code, bool preview_nig
                                    0);
     lv_label_set_text(city,
                       preview ? "天气效果预览" : (s->weather_city[0] ? s->weather_city : "中山"));
-    lv_obj_set_x(city, preview ? 44 : 20);
+    lv_obj_set_x(city, preview ? 64 : 20);
+    lv_obj_set_width(city, preview ? 214 : 230);
 
     if (preview || s->time_valid) {
         strftime(text, sizeof(text), "%H:%M", &t);

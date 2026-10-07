@@ -1,0 +1,44 @@
+{
+  "version": "1.1.1",
+  "date": "2026-10-07",
+  "firmware": [
+    {
+      "file": "firmware.bin",
+      "bytes": 3980704,
+      "sha256": "e5b56f489e4d850d15b492f8eed725e53e44f863581f0974b90cd4a9dbbccc71"
+    },
+    {
+      "file": "bootloader.bin",
+      "bytes": 21088,
+      "sha256": "fbbb37a9363f04bbbe21ab0b2848020c32d41d171fe9b7077804022fdfcb723e"
+    },
+    {
+      "file": "partitions.bin",
+      "bytes": 3072,
+      "sha256": "ef38c1c8bdb24a2006840e0b411327c92ac382d3138835ada6b6a8448d0db3a7"
+    },
+    {
+      "file": "firmware.elf",
+      "bytes": 22274016,
+      "sha256": "7520e97ca27b038ac312c8a90d6a139d9052a68b9c1defeaa4e0e929c45030a5"
+    }
+  ],
+  "checks": {
+    "build": "pass",
+    "flash_hash_verification": "pass",
+    "device_version": "1.1.1",
+    "host_c_cpp_sanitizer_suites": 14,
+    "python_test_cases": 2,
+    "game_icon_navigation": "pass",
+    "expanded_back_hit_area": "pass_at_50_36",
+    "menu_back_to_home": "pass",
+    "screenshots": "8 captured",
+    "partition_unchanged_from_1_1_0": true
+  },
+  "final_page": "home",
+  "limits": [
+    "LVGL pointer injection; physical touch comfort not tested",
+    "Voice and USB transfer end-to-end tests not repeated for this UI maintenance release",
+    "Local release only; no Git remote configured"
+  ]
+}

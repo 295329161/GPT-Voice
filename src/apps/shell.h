@@ -6,6 +6,7 @@ void shell_voice_sources(bool show);
 lv_obj_t *ui_label(lv_obj_t *parent, const char *text, int x, int y, int width);
 lv_obj_t *ui_button(lv_obj_t *parent, const char *text, int x, int y, int width, lv_event_cb_t cb,
                     void *data);
+lv_obj_t *ui_back_button(lv_obj_t *parent, lv_event_cb_t cb);
 void games_create(lv_obj_t *parent, lv_obj_t *toolbar, int kind);
 void games_destroy(void);
 void games_tick(void);

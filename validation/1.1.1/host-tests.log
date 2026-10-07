@@ -1,0 +1,20 @@
+USB bounded I/O, partial-sector preservation, errors and 60s deadline PASS
+PNG/JPEG dimension bounds, truncation, segment length and progressive rejection PASS
+BOOT debounce, startup hold, release bounce, no repeat and clock wrap PASS
+Search intent, cancellation and time/weather isolation PASS
+MCP reply matching, large evidence, sources and error handling PASS
+Conversation late ASR, streaming order, tool continuation and bounded UTF-8 history PASS
+16000 -> 24000: sample count, chunk invariance and 440 Hz level PASS
+24000 -> 16000: sample count, chunk invariance and 440 Hz level PASS
+SD path confinement and FAT filename validation PASS
+SD read errors, duplicate/invalid entries and stat failures preserve last valid listing PASS
+Tile solvability, blocking, tray, undo, shuffle and shooter bounds/combat/upgrades PASS
+Tilt step response, angle wrapping, dead zone and bounded sensitivity PASS
+MP3 invalid-header progress, ID3 skipping and split-sync recovery PASS
+WAV PCM16, extended fmt, odd metadata, truncation, invalid fields and data boundary PASS
+.Native USB unavailable; using the independent CH340 upload port.
+.
+----------------------------------------------------------------------
+Ran 2 tests in 0.004s
+
+OK

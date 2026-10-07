@@ -1,0 +1,34 @@
+[
+  {
+    "file": "screenshots/menu-1.png",
+    "caption": "应用菜单第一页"
+  },
+  {
+    "file": "screenshots/menu-2.png",
+    "caption": "应用菜单第二页"
+  },
+  {
+    "file": "screenshots/games.png",
+    "caption": "三个游戏入口"
+  },
+  {
+    "file": "screenshots/tiles.png",
+    "caption": "三消工具栏"
+  },
+  {
+    "file": "screenshots/music.png",
+    "caption": "音乐页"
+  },
+  {
+    "file": "screenshots/usb.png",
+    "caption": "USB 普通模式"
+  },
+  {
+    "file": "screenshots/weather-preview.png",
+    "caption": "天气效果预览"
+  },
+  {
+    "file": "screenshots/about.png",
+    "caption": "设备信息 1.1.1（IP 已遮盖）"
+  }
+]

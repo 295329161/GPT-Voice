@@ -1,4 +1,5 @@
 #include "shell.h"
+#include "assets/ui_art.h"
 #include "esp_app_desc.h"
 #include "core/terminal.h"
 #include "core/image_info.h"
@@ -47,38 +48,52 @@ static void voice_leave(void) {
     voice_request(false);
 }
 static void usb_page(void) { usb_transfer_view_create(shell_content()); }
+static void app_art(lv_obj_t *parent, const lv_img_dsc_t *art, int x, int y) {
+    lv_obj_t *image = lv_img_create(parent);
+    lv_img_set_src(image, art);
+    lv_obj_set_pos(image, x, y);
+    lv_obj_clear_flag(image, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE);
+}
+#define MENU_ICON(name) static void name##_icon(lv_obj_t *parent) { app_art(parent, &art_icon_##name, 39, 1); }
+MENU_ICON(voice)
+MENU_ICON(music)
+MENU_ICON(games)
+MENU_ICON(pictures)
+MENU_ICON(settings)
+MENU_ICON(files)
+MENU_ICON(home)
 static const terminal_app_t defaults[] = {
     {.id = VOICE,
      .name = "GPT Voice",
      .icon = LV_SYMBOL_CALL,
      .color = 0x52d7be,
-     .create = voice_page,
+     .draw_icon = voice_icon, .create = voice_page,
      .enter = voice_enter,
      .leave = voice_leave},
-    {.id = MUSIC, .name = "音乐", .icon = LV_SYMBOL_AUDIO, .color = 0xe97cac, .create = music_page},
-    {.id = GAMES, .name = "游戏", .icon = LV_SYMBOL_PLAY, .color = 0xa58af9, .create = games_page},
+    {.id = MUSIC, .name = "音乐", .icon = LV_SYMBOL_AUDIO, .color = 0xe97cac, .draw_icon = music_icon, .create = music_page},
+    {.id = GAMES, .name = "游戏", .icon = LV_SYMBOL_PLAY, .color = 0xa58af9, .draw_icon = games_icon, .create = games_page},
     {.id = PICTURES,
      .name = "图片",
      .icon = LV_SYMBOL_IMAGE,
      .color = 0xf4b85b,
-     .create = pictures_page},
+     .draw_icon = pictures_icon, .create = pictures_page},
     {.id = SETTINGS,
      .name = "设置",
      .icon = LV_SYMBOL_SETTINGS,
      .color = 0x90a4c1,
-     .create = settings_page},
+     .draw_icon = settings_icon, .create = settings_page},
     {.id = FILES,
      .name = "文件管理",
      .icon = LV_SYMBOL_DIRECTORY,
      .color = 0x68acee,
-     .create = files_page},
+     .draw_icon = files_icon, .create = files_page},
     {.id = USB_TRANSFER, .name = "USB 传文件", .icon = "", .color = 0x76e4d4,
      .create = usb_page, .draw_icon = usb_transfer_menu_icon},
     {.id = HA,
      .name = "Home Assistant",
      .icon = LV_SYMBOL_HOME,
      .color = 0x4bc7e8,
-     .create = ha_page}};
+     .draw_icon = home_icon, .create = ha_page}};
 static const terminal_app_t *registry[24];
 static int registry_count;
 #define MENU_PAGE_SIZE 4
@@ -148,6 +163,22 @@ lv_obj_t *ui_button(lv_obj_t *p, const char *s, int x, int y, int w, lv_event_cb
     lv_obj_center(l);
     if (cb)
         lv_obj_add_event_cb(b, cb, LV_EVENT_CLICKED, data);
+    return b;
+}
+/* The visible button is also its entire hit area: never overlap page controls. */
+lv_obj_t *ui_back_button(lv_obj_t *parent, lv_event_cb_t cb) {
+    lv_obj_t *b = ui_button(parent, "", 2, 0, 54, cb, NULL);
+    lv_obj_set_height(b, 40);
+    lv_obj_set_style_pad_all(b, 0, 0);
+    lv_obj_clear_flag(b, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_style_bg_color(b, lv_color_hex(0x385570), LV_STATE_PRESSED);
+    static const lv_point_t points[] = {{31,10},{21,20},{31,30}};
+    lv_obj_t *arrow = lv_line_create(b);
+    lv_line_set_points(arrow, points, 3);
+    lv_obj_set_style_line_width(arrow, 4, 0);
+    lv_obj_set_style_line_color(arrow, lv_color_hex(0xe2f2ff), 0);
+    lv_obj_set_style_line_rounded(arrow, true, 0);
+    lv_obj_clear_flag(arrow, LV_OBJ_FLAG_CLICKABLE);
     return b;
 }
 static void back(lv_event_t *e) {
@@ -230,9 +261,9 @@ static void menu_create(void) {
         int x = (k % 2) * 156;
         if (count == 3 && k == 2)
             x = 78;
-        lv_obj_t *b = ui_button(content, "", x, (k / 2) * 96, 148, navigate,
+        lv_obj_t *b = ui_button(content, "", x, (k / 2) * 90, 148, navigate,
                                 (void *)(intptr_t)registry[i]->id);
-        lv_obj_set_height(b, 90);
+        lv_obj_set_height(b, 86);
         lv_obj_set_style_pad_all(b, 0, 0);
         lv_obj_set_style_radius(b, 16, 0);
         lv_obj_set_style_bg_color(b, lv_color_hex(0x1b2b40), 0);
@@ -245,13 +276,13 @@ static void menu_create(void) {
             lv_obj_set_style_text_color(icon, lv_color_hex(registry[i]->color), 0);
             lv_obj_set_style_text_font(icon, &lv_font_montserrat_48, 0);
         }
-        lv_obj_t *name = ui_label(b, registry[i]->name, 0, 65, 148);
+        lv_obj_t *name = ui_label(b, registry[i]->name, 0, 62, 148);
         lv_obj_set_style_text_align(name, LV_TEXT_ALIGN_CENTER, 0);
         if (registry[i]->id == HA)
             lv_obj_set_style_text_font(name, &lv_font_montserrat_14, 0);
     }
     int pages = (registry_count + MENU_PAGE_SIZE - 1) / MENU_PAGE_SIZE;
-    lv_obj_t *pager = ui_button(content, "", 100, 186, 104, menu_more, NULL);
+    lv_obj_t *pager = ui_button(content, "", 100, 180, 104, menu_more, NULL);
     lv_obj_set_height(pager, 14);
     lv_obj_set_style_bg_opa(pager, 0, 0);
     lv_obj_set_style_pad_all(pager, 0, 0);
@@ -330,7 +361,7 @@ static void weather_preview_page(void) {
     preview_scene = 0;
     preview_night = false;
     weather_view_create(content);
-    ui_button(screen, LV_SYMBOL_LEFT, 4, 3, 32, back, NULL);
+    ui_back_button(screen, back);
     ui_button(content, "切换天气", 16, 196, 140, preview_change, NULL);
     ui_button(content, "切换昼夜", 164, 196, 140, preview_change, (void *)1);
     weather_view_preview(snapshot, preview_codes[preview_scene], preview_night);
@@ -365,12 +396,19 @@ static void music_page(void) {
     music_view_create(content, back, browse_music);
 }
 static void games_page(void) {
-    ui_button(content, "雷电突击", 0, 4, 294, navigate, (void *)SHOOTER);
-    ui_button(content, "羊了个羊", 0, 47, 294, navigate, (void *)TILES);
-    ui_button(content, "Color Flood", 0, 90, 294, navigate, (void *)FLOOD);
-    ui_label(content, "体感灵敏度", 0, 141, 115);
+    const char *names[] = {"雷电突击", "羊了个羊", "Color Flood"};
+    const lv_img_dsc_t *art[] = {&art_icon_shooter_small, &art_icon_tiles_small, &art_icon_flood_small};
+    for (int i = 0; i < 3; i++) {
+        lv_obj_t *b = ui_button(content, "", 0, i * 49, 294, navigate, (void *)(intptr_t)(SHOOTER + i));
+        lv_obj_set_height(b, 45);
+        lv_obj_set_style_pad_all(b, 0, 0);
+        lv_obj_set_style_radius(b, 12, 0);
+        app_art(b, art[i], 9, 2);
+        ui_label(b, names[i], 70, 13, 194);
+    }
+    ui_label(content, "体感灵敏度", 0, 160, 115);
     lv_obj_t *s = lv_slider_create(content);
-    lv_obj_set_pos(s, 134, 151);
+    lv_obj_set_pos(s, 134, 168);
     lv_obj_set_size(s, 145, 10);
     lv_slider_set_range(s, 1, 5);
     lv_slider_set_value(s, config.sensitivity, LV_ANIM_OFF);
@@ -430,7 +468,7 @@ static void voice_page(void) {
     ui_label(list, "", 0, 0, 258);
 }
 static void ha_page(void) {
-    ui_label(content, LV_SYMBOL_HOME, 119, 28, 60);
+    app_art(content, &art_icon_home, 112, 12);
     ui_label(content, "Home Assistant\n开发中", 55, 83, 230);
 }
 static void file_select(lv_event_t *e) {
@@ -660,23 +698,23 @@ static void render(int page) {
     }
     info = list = picture = NULL;
     bool game = page == SHOOTER || page == TILES || page == FLOOD;
-    heading = ui_label(screen, "", 46, 9, 185);
+    heading = ui_label(screen, "", 64, 12, 175);
     game_bar = screen;
     if (page != HOME && page != WEATHER_PREVIEW && page != MUSIC) {
-        ui_button(screen, LV_SYMBOL_LEFT, 4, 3, 32, back, (void *)MENU);
+        ui_back_button(screen, back);
         if (!game)
             ui_button(screen, LV_SYMBOL_HOME, 244, 3, 34, navigate, (void *)HOME);
     }
     content = lv_obj_create(screen);
     lv_obj_remove_style_all(content);
-    lv_obj_set_pos(content, 9, 40);
-    lv_obj_set_size(content, 302, 190);
+    lv_obj_set_pos(content, 9, 44);
+    lv_obj_set_size(content, 302, 186);
     if (page == MENU) {
-        lv_obj_set_pos(content, 8, 36);
-        lv_obj_set_size(content, 304, 200);
+        lv_obj_set_pos(content, 8, 44);
+        lv_obj_set_size(content, 304, 196);
     }
     if (game) {
-        lv_obj_set_pos(content, 4, 36);
+        lv_obj_set_pos(content, 4, 40);
         lv_obj_set_size(content, 312, 200);
         lv_obj_add_flag(heading, LV_OBJ_FLAG_HIDDEN);
     }

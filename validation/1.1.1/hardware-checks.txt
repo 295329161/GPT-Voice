@@ -1,0 +1,7 @@
+Firmware 1.1.1 confirmed on device information page.
+Three game icon taps enter pages 16, 17, 18.
+Tap (50,36) returns from games, music, USB and weather preview.
+Tap (50,36) on menu returns home.
+Two menu pages and six related pages captured.
+Final device page: home.
+Input: serial-injected LVGL pointer events, not physical finger testing.

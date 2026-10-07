@@ -1,5 +1,6 @@
 #include "music_view.h"
 #include "shell.h"
+#include "assets/ui_art.h"
 #include "esp_timer.h"
 #include <stdio.h>
 #include <string.h>
@@ -62,7 +63,7 @@ void music_view_create(lv_obj_t *parent, lv_event_cb_t back, lv_event_cb_t brows
     lv_obj_set_style_bg_grad_dir(parent, LV_GRAD_DIR_VER, 0);
     lv_obj_set_style_bg_opa(parent, LV_OPA_COVER, 0);
 
-    button(parent, LV_SYMBOL_LEFT, 5, 0, 38, back, NULL, false);
+    ui_back_button(parent, back);
     heading = label(parent, "音乐", 94, 11, 132, 0x33242e, NULL);
     lv_obj_set_style_text_align(heading, LV_TEXT_ALIGN_CENTER, 0);
     button(parent, LV_SYMBOL_LIST, 247, 0, 38, browse, NULL, false);
@@ -79,8 +80,8 @@ void music_view_create(lv_obj_t *parent, lv_event_cb_t back, lv_event_cb_t brows
     lv_obj_set_style_bg_opa(halo, 35, 0);
     halo = shape(cover, -28, 77, 95, 0x7b1637, LV_RADIUS_CIRCLE);
     lv_obj_set_style_bg_opa(halo, 28, 0);
-    lv_obj_t *note = label(cover, LV_SYMBOL_AUDIO, 0, 0, 100, 0xffffff, &lv_font_montserrat_48);
-    lv_obj_set_style_text_align(note, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_t *note = lv_img_create(cover);
+    lv_img_set_src(note, &art_icon_music);
     lv_obj_center(note);
 
     title = label(parent, "选择一首音乐", 155, 59, 148, 0x241c24, NULL);
